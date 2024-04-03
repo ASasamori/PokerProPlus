@@ -18,8 +18,8 @@ Our goal largely consists of making a successful AI to play poker. This AI will 
 
 ## Solution Concept
 ![PokerProPlusSoftwareDiagram](https://github.com/ASasamori/PokerProPlus/assets/76934261/16368a44-0ec5-496b-8980-0a6d29d8338f)
-1. Provided:
-Within the open-sourced game environment contains the states, actions, and a few agents. 
+1. Provided
+- Within the open-sourced game environment contains the states, actions, and a few agents. 
 
 2. Improved Actions
 - The current actions within the environment consist of fold, check, call, raise_pot, raise_half_pot, and raise_2pot.
