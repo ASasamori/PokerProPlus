@@ -22,22 +22,15 @@ from rl.core import Processor
 
 autoplay = True  # play automatically if played against keras-rl
 
-window_length = 1
-nb_max_start_steps = 1  # random action
-train_interval = 100  # train every 100 steps
-nb_steps_warmup = 50  # before training starts, should be higher than start steps
-nb_steps = 100000
-memory_limit = int(nb_steps / 2)
-batch_size = 500  # items sampled from memory to train
-enable_double_dqn = False
-
 log = logging.getLogger(__name__)
 
 
 class Player:
     """Mandatory class with the player methods"""
 
-    def __init__(self, name='DQN', load_model=None, env=None):
+    def __init__(self, name='DQN', load_model=None, env=None, window_length=1, nb_max_start_steps=1,
+                 train_interval=100, nb_steps_warmup=50, nb_steps=100000, memory_limit=None, batch_size=500,
+                 enable_double_dqn=False, lr=1e-3):
         """Initiaization of an agent"""
         self.equity_alive = 0
         self.actions = []
@@ -45,6 +38,17 @@ class Player:
         self.temp_stack = []
         self.name = name
         self.autoplay = True
+
+        # hyperparameters we can adjust
+        self.window_length = window_length
+        self.nb_max_start_steps = nb_max_start_steps
+        self.train_interval = train_interval
+        self.nb_steps_warmup = nb_steps_warmup
+        self.nb_steps = nb_steps
+        self.memory_limit = memory_limit if memory_limit is not None else int(nb_steps / 2)
+        self.batch_size = batch_size
+        self.enable_double_dqn = enable_double_dqn
+        self.lr = lr
 
         self.dqn = None
         self.model = None
@@ -72,16 +76,16 @@ class Player:
 
         # Finally, we configure and compile our agent. You can use every built-in Keras optimizer and
         # even the metrics!
-        memory = SequentialMemory(limit=memory_limit, window_length=window_length)
+        memory = SequentialMemory(limit=self.memory_limit, window_length=self.window_length)
         policy = TrumpPolicy()
 
         nb_actions = env.action_space.n
 
-        self.dqn = DQNAgent(model=self.model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=nb_steps_warmup,
+        self.dqn = DQNAgent(model=self.model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=self.nb_steps_warmup,
                             target_model_update=1e-2, policy=policy,
                             processor=CustomProcessor(),
-                            batch_size=batch_size, train_interval=train_interval, enable_double_dqn=enable_double_dqn)
-        self.dqn.compile(Adam(lr=1e-3), metrics=['mae'])
+                            batch_size=self.batch_size, train_interval=self.train_interval, enable_double_dqn=self.enable_double_dqn)
+        self.dqn.compile(Adam(lr=self.lr), metrics=['mae'])
 
     def start_step_policy(self, observation):
         """Custom policy for random decisions for warm up."""
@@ -97,7 +101,7 @@ class Player:
         tensorboard = TensorBoard(log_dir='./Graph/{}'.format(timestr), histogram_freq=0, write_graph=True,
                                   write_images=False)
 
-        self.dqn.fit(self.env, nb_max_start_steps=nb_max_start_steps, nb_steps=nb_steps, visualize=False, verbose=2,
+        self.dqn.fit(self.env, nb_max_start_steps=self.nb_max_start_steps, nb_steps=self.nb_steps, visualize=False, verbose=2,
                      start_step_policy=self.start_step_policy, callbacks=[tensorboard])
 
         # Save the architecture
@@ -123,7 +127,7 @@ class Player:
 
     def play(self, nb_episodes=5, render=False):
         """Let the agent play"""
-        memory = SequentialMemory(limit=memory_limit, window_length=window_length)
+        memory = SequentialMemory(limit=self.memory_limit, window_length=self.window_length)
         policy = TrumpPolicy()
 
         class CustomProcessor(Processor):  # pylint: disable=redefined-outer-name
@@ -144,11 +148,11 @@ class Player:
 
         nb_actions = self.env.action_space.n
 
-        self.dqn = DQNAgent(model=self.model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=nb_steps_warmup,
+        self.dqn = DQNAgent(model=self.model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=self.nb_steps_warmup,
                             target_model_update=1e-2, policy=policy,
                             processor=CustomProcessor(),
-                            batch_size=batch_size, train_interval=train_interval, enable_double_dqn=enable_double_dqn)
-        self.dqn.compile(Adam(lr=1e-3), metrics=['mae'])  # pylint: disable=no-member
+                            batch_size=self.batch_size, train_interval=self.train_interval, enable_double_dqn=self.enable_double_dqn)
+        self.dqn.compile(Adam(lr=self.lr), metrics=['mae'])  # pylint: disable=no-member
 
         self.dqn.test(self.env, nb_episodes=nb_episodes, visualize=render)
 

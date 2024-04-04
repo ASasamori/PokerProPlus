@@ -9,6 +9,7 @@ Usage:
   main.py selfplay dqn_train [options]
   main.py selfplay dqn_play [options]
   main.py learn_table_scraping [options]
+  main.py selfplay tune [options]
 
 options:
   -h --help                 Show this screen.
@@ -25,6 +26,7 @@ options:
 
 import logging
 
+import itertools
 import gym
 import numpy as np
 import pandas as pd
@@ -34,17 +36,16 @@ from gym_env.env import PlayerShell
 from tools.helper import get_config
 from tools.helper import init_logger
 
-
 # pylint: disable=import-outside-toplevel
 
 def command_line_parser():
     """Entry function"""
     args = docopt(__doc__)
     if args['--log']:
-        logfile = args['--log']
+        logfile = 'default'
     else:
         print("Using default log file")
-        logfile = 'default'
+        logfile = None
     model_name = args['--name'] if args['--name'] else 'dqn1'
     screenloglevel = logging.INFO if not args['--screenloglevel'] else \
         getattr(logging, args['--screenloglevel'].upper())
@@ -80,7 +81,8 @@ def command_line_parser():
         elif args['dqn_play']:
             runner.dqn_play_keras_rl(model_name)
 
-
+        elif args['tune']:
+            runner.tune_params()
     else:
         raise RuntimeError("Argument not yet implemented")
 
@@ -103,7 +105,7 @@ class SelfPlay:
         """Create an environment with 6 random players"""
         from agents.agent_random import Player as RandomPlayer
         env_name = 'neuron_poker-v0'
-        num_of_plrs = 2
+        num_of_plrs = 6
         self.env = gym.make(env_name, initial_stacks=self.stack, render=self.render)
         for _ in range(num_of_plrs):
             player = RandomPlayer()
@@ -115,7 +117,7 @@ class SelfPlay:
         """Create an environment with 6 key press agents"""
         from agents.agent_keypress import Player as KeyPressAgent
         env_name = 'neuron_poker-v0'
-        num_of_plrs = 2
+        num_of_plrs = 6
         self.env = gym.make(env_name, initial_stacks=self.stack, render=self.render)
         for _ in range(num_of_plrs):
             player = KeyPressAgent()
@@ -249,7 +251,36 @@ class SelfPlay:
         print("============")
         print(league_table)
         print(f"Best Player: {best_player}")
+    
+    def tune_params(self):
+        """Hypertune parameters of a dqn model"""
+        from agents.agent_consider_equity import Player as EquityPlayer
+        from agents.agent_keras_rl_dqn import Player as DQNPlayer
+        from agents.agent_random import Player as RandomPlayer
+        env_name = 'neuron_poker-v0'
+        env = gym.make(env_name, initial_stacks=self.stack, funds_plot=self.funds_plot, render=self.render,
+                       use_cpp_montecarlo=self.use_cpp_montecarlo)
 
+        np.random.seed(123)
+        env.seed(123)
+        env.add_player(EquityPlayer(name='equity/50/70', min_call_equity=.5, min_bet_equity=.7))
+        env.add_player(EquityPlayer(name='equity/20/30', min_call_equity=.2, min_bet_equity=.3))
+        env.add_player(RandomPlayer())
+        env.add_player(RandomPlayer())
+        env.add_player(RandomPlayer())
+        env.add_player(PlayerShell(name='keras-rl', stack_size=self.stack))  # shell is used for callback to keras rl
+
+        env.reset()
+
+        #declare hyperparameters you want to tune and their array
+        lr_values = [1e-3,1e-2,1e-1]
+        window_length_values = [1,2,3]
+        
+        for lr, window_length in itertools.product(lr_values,window_length_values):
+            model_name = "model_" + str(lr) + "_" + str(window_length)
+            dqn = DQNPlayer(name=model_name, lr=lr, window_length=window_length)
+            dqn.initiate_agent(env)
+            dqn.train(env_name=model_name)
 
 if __name__ == '__main__':
     command_line_parser()
