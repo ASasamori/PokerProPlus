@@ -66,7 +66,7 @@ class HoldemTable(Env):
 
     def __init__(self, initial_stacks=100, small_blind=1, big_blind=2, render=False, funds_plot=True,
                  max_raises_per_player_round=2, use_cpp_montecarlo=False, raise_illegal_moves=False,
-                 calculate_equity=False):
+                 calculate_equity=False, epochs_max = 10):
         """
         The table needs to be initialized once at the beginning
 
@@ -78,7 +78,7 @@ class HoldemTable(Env):
             render (bool): render table after each move in graphical format
             funds_plot (bool): show plot of funds history at end of each episode
             max_raises_per_player_round (int): max raises per round per player
-
+            epochs_max: max epoch to run the simulation for
         """
         if use_cpp_montecarlo:
             import cppimport
@@ -120,7 +120,8 @@ class HoldemTable(Env):
         self.funds_plot = funds_plot
         self.max_raises_per_player_round = max_raises_per_player_round
         self.calculate_equity = calculate_equity
-
+        self.epochs = 0
+        self.epochs_max = epochs_max
         # pots
         self.community_pot = 0
         self.current_round_pot = 9
@@ -463,9 +464,14 @@ class HoldemTable(Env):
                 self.player_cycle.deactivate_player(idx)
 
         remaining_players = sum(player_alive)
+        if (self.epochs_max != None and self.epochs == self.epochs_max):
+            self._game_over()
+            return True
+            
         if remaining_players < 2:
             self._game_over()
             return True
+        self.epochs += 1
         return False
 
     def _game_over(self):
