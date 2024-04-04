@@ -21,7 +21,7 @@ options:
   --screenloglevel=<>       log level on screen
   --episodes=<>             number of episodes to play
   --stack=<>                starting stack for each player [default: 500].
-
+  --epochs=<>                max number of rotations of table [default: 10].
 """
 
 import logging
@@ -44,7 +44,7 @@ def command_line_parser():
     if args['--log']:
         logfile = 'default'
     else:
-        print("Using default log file")
+        print("Using no log file")
         logfile = None
     model_name = args['--name'] if args['--name'] else 'dqn1'
     screenloglevel = logging.INFO if not args['--screenloglevel'] else \
@@ -59,7 +59,7 @@ def command_line_parser():
         num_episodes = 1 if not args['--episodes'] else int(args['--episodes'])
         runner = SelfPlay(render=args['--render'], num_episodes=num_episodes,
                           use_cpp_montecarlo=args['--use_cpp_montecarlo'],
-                          funds_plot=args['--funds_plot'],
+                          funds_plot=args['--funds_plot'], epochs_max=int(args['--epochs']),
                           stack=int(args['--stack']))
 
         if args['random']:
@@ -90,7 +90,7 @@ def command_line_parser():
 class SelfPlay:
     """Orchestration of playing against itself"""
 
-    def __init__(self, render, num_episodes, use_cpp_montecarlo, funds_plot, stack=500):
+    def __init__(self, render, num_episodes, use_cpp_montecarlo, funds_plot, epochs_max, stack=500):
         """Initialize"""
         self.winner_in_episodes = []
         self.use_cpp_montecarlo = use_cpp_montecarlo
@@ -100,6 +100,7 @@ class SelfPlay:
         self.num_episodes = num_episodes
         self.stack = stack
         self.log = logging.getLogger(__name__)
+        self.epochs_max = epochs_max
 
     def random_agents(self):
         """Create an environment with 6 random players"""
@@ -158,7 +159,7 @@ class SelfPlay:
 
         for improvement_round in range(improvement_rounds):
             env_name = 'neuron_poker-v0'
-            self.env = gym.make(env_name, initial_stacks=self.stack, render=self.render)
+            self.env = gym.make(env_name, initial_stacks=self.stack, render=self.render, epochs_max=self.epochs_max)
             for i in range(6):
                 self.env.add_player(EquityPlayer(name=f'Equity/{calling[i]}/{betting[i]}',
                                                  min_call_equity=calling[i],
