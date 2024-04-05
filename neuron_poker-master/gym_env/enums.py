@@ -8,13 +8,18 @@ class Action(Enum):
     FOLD = 0
     CHECK = 1
     CALL = 2
-    RAISE_3BB = 3
-    RAISE_HALF_POT = 4
-    RAISE_POT = 5
-    RAISE_2POT = 6
-    ALL_IN = 7
-    SMALL_BLIND = 8
-    BIG_BLIND = 9
+    RAISE_MIN = 3
+    RAISE_2BB = 4
+    RAISE_3BB = 5
+    RAISE_HALF_POT = 6
+    RAISE_POT = 7
+    RAISE_1_5POT = 8
+    RAISE_2POT = 9
+    ALL_IN = 10
+    SMALL_BLIND = 11
+    BIG_BLIND = 12
+    RAISE_2X = 13
+
 
 
 class Stage(Enum):

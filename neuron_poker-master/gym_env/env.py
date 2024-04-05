@@ -95,6 +95,7 @@ class HoldemTable(Env):
         self.players = []
         self.table_cards = None
         self.dealer_pos = None
+        self.latest_raise = big_blind
         self.player_status = []  # one hot encoded
         self.current_player = None
         self.player_cycle = None  # cycle iterator
@@ -341,8 +342,23 @@ class HoldemTable(Env):
                 contribution = 0
                 self.player_cycle.mark_checker()
 
+            elif action == Action.RAISE_MIN:
+                contribution = self.big_blind - self.player_pots[self.current_player.seat]
+                self.raisers.append(self.current_player.seat)
+                self.current_player.num_raises_in_street[self.stage] += 1
+
+            elif action == Action.RAISE_2BB:
+                contribution = 2 * self.big_blind - self.player_pots[self.current_player.seat]
+                self.raisers.append(self.current_player.seat)
+                self.current_player.num_raises_in_street[self.stage] += 1
+
             elif action == Action.RAISE_3BB:
                 contribution = 3 * self.big_blind - self.player_pots[self.current_player.seat]
+                self.raisers.append(self.current_player.seat)
+                self.current_player.num_raises_in_street[self.stage] += 1
+
+            elif action == Action.RAISE_2X:
+                contribution = 2 * self.latest_raise - self.player_pots[self.current_player.seat]
                 self.raisers.append(self.current_player.seat)
                 self.current_player.num_raises_in_street[self.stage] += 1
 
@@ -353,6 +369,11 @@ class HoldemTable(Env):
 
             elif action == Action.RAISE_POT:
                 contribution = (self.community_pot + self.current_round_pot)
+                self.raisers.append(self.current_player.seat)
+                self.current_player.num_raises_in_street[self.stage] += 1
+
+            elif action == Action.RAISE_1_5POT:
+                contribution = (self.community_pot + self.current_round_pot) * 1.5
                 self.raisers.append(self.current_player.seat)
                 self.current_player.num_raises_in_street[self.stage] += 1
 
@@ -369,16 +390,17 @@ class HoldemTable(Env):
             elif action == Action.SMALL_BLIND:
                 contribution = np.minimum(self.small_blind, self.current_player.stack)
 
-
             elif action == Action.BIG_BLIND:
                 contribution = np.minimum(self.big_blind, self.current_player.stack)
                 self.player_cycle.mark_bb()
             else:
                 raise RuntimeError("Illegal action.")
-
             if contribution > self.min_call and not (action == Action.BIG_BLIND or action == Action.SMALL_BLIND):
                 self.player_cycle.mark_raiser()
-
+                
+            if action not in [Action.CALL, Action.CHECK, Action.FOLD]:
+                self.latest_raise = contribution
+                
             self.current_player.stack -= contribution
             self.player_pots[self.current_player.seat] += contribution
             self.current_round_pot += contribution
@@ -636,6 +658,12 @@ class HoldemTable(Env):
             self.legal_moves.append(Action.FOLD)
 
         if self.current_player.num_raises_in_street[self.stage] < self.max_raises_per_player_round:
+            if self.current_player.stack >= self.big_blind - self.player_pots[self.current_player.seat]:
+                self.legal_moves.append(Action.RAISE_MIN)
+
+            if self.current_player.stack >= 2 * self.big_blind - self.player_pots[self.current_player.seat]:
+                self.legal_moves.append(Action.RAISE_2BB)
+
             if self.current_player.stack >= 3 * self.big_blind - self.player_pots[self.current_player.seat]:
                 self.legal_moves.append(Action.RAISE_3BB)
 
@@ -645,9 +673,15 @@ class HoldemTable(Env):
             if self.current_player.stack >= (self.community_pot + self.current_round_pot) >= self.min_call:
                 self.legal_moves.append(Action.RAISE_POT)
 
+            if self.current_player.stack >= ((self.community_pot + self.current_round_pot) * 1.5) >= self.min_call:
+                self.legal_moves.append(Action.RAISE_1_5POT)
+
             if self.current_player.stack >= ((self.community_pot + self.current_round_pot) * 2) >= self.min_call:
                 self.legal_moves.append(Action.RAISE_2POT)
-
+            
+            if self.current_player.stack >= 2*self.latest_raise - self.player_pots[self.current_player.seat]:
+                self.legal_moves.append(Action.RAISE_2X)
+                
             if self.current_player.stack > 0:
                 self.legal_moves.append(Action.ALL_IN)
 
