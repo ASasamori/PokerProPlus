@@ -21,7 +21,7 @@ options:
   --screenloglevel=<>       log level on screen
   --episodes=<>             number of episodes to play
   --stack=<>                starting stack for each player [default: 500].
-  --epochs=<>                max number of rotations of table [default: 10].
+  --epochs=<>                max number of rotations of table 
 """
 
 import logging
@@ -59,7 +59,7 @@ def command_line_parser():
         num_episodes = 1 if not args['--episodes'] else int(args['--episodes'])
         runner = SelfPlay(render=args['--render'], num_episodes=num_episodes,
                           use_cpp_montecarlo=args['--use_cpp_montecarlo'],
-                          funds_plot=args['--funds_plot'], epochs_max=int(args['--epochs']),
+                          funds_plot=args['--funds_plot'], epochs_max=(args['--epochs']),
                           stack=int(args['--stack']))
 
         if args['random']:
@@ -100,7 +100,11 @@ class SelfPlay:
         self.num_episodes = num_episodes
         self.stack = stack
         self.log = logging.getLogger(__name__)
-        self.epochs_max = epochs_max
+
+        if epochs_max is not None:
+            self.epochs_max = int(epochs_max)
+        else:
+            self.epochs_max = epochs_max
 
     def random_agents(self):
         """Create an environment with 6 random players"""
@@ -164,7 +168,7 @@ class SelfPlay:
                 self.env.add_player(EquityPlayer(name=f'Equity/{calling[i]}/{betting[i]}',
                                                  min_call_equity=calling[i],
                                                  min_bet_equity=betting[i]))
-
+            print(self.num_episodes)
             for _ in range(self.num_episodes):
                 self.env.reset()
                 self.winner_in_episodes.append(self.env.winner_ix)
@@ -189,7 +193,7 @@ class SelfPlay:
         from agents.agent_random import Player as RandomPlayer
         env_name = 'neuron_poker-v0'
         env = gym.make(env_name, initial_stacks=self.stack, funds_plot=self.funds_plot, render=self.render,
-                       use_cpp_montecarlo=self.use_cpp_montecarlo)
+                       use_cpp_montecarlo=self.use_cpp_montecarlo, epochs_max=self.epochs_max)
 
         np.random.seed(123)
         env.seed(123)
@@ -199,7 +203,7 @@ class SelfPlay:
         env.add_player(RandomPlayer())
         env.add_player(RandomPlayer())
         env.add_player(PlayerShell(name='keras-rl', stack_size=self.stack))  # shell is used for callback to keras rl
-
+        
         env.reset()
 
         dqn = DQNPlayer()

@@ -66,7 +66,7 @@ class HoldemTable(Env):
 
     def __init__(self, initial_stacks=100, small_blind=1, big_blind=2, render=False, funds_plot=True,
                  max_raises_per_player_round=2, use_cpp_montecarlo=False, raise_illegal_moves=False,
-                 calculate_equity=False, epochs_max = 10):
+                 calculate_equity=False, epochs_max = None):
         """
         The table needs to be initialized once at the beginning
 
