@@ -8,7 +8,7 @@ from keras import layers
 from keras.optimizers import Adam
 from keras.models import Sequential
 
-from rl.policy import BoltzmannQPolicy
+from rl.policy import EpsGreedyQPolicy,BoltzmannQPolicy
 from rl.memory import SequentialMemory
 from rl.agents.dqn import DQNAgent
 from rl.core import Processor
@@ -20,10 +20,9 @@ log = logging.getLogger(__name__)
 
 
 def create_q_model(env):
-    print(env.observation_space)
     return Sequential(
         [
-            layers.Dense(512,activation='relu', input_shape=(1,1,328)),
+            layers.Dense(512,activation='relu', input_shape=(328,)),
             layers.Dropout(0.2),
             layers.Dense(256,activation='relu'),
             layers.Dropout(0.2),
@@ -79,11 +78,11 @@ class Player:
         # Finally, we configure and compile our agent. You can use every built-in Keras optimizer and
         # even the metrics!
         memory = SequentialMemory(limit=self.memory_limit, window_length=self.window_length)
-        policy = BoltzmannQPolicy()
+        policy = EpsGreedyQPolicy(eps=0.1)
 
         self.dqn = DQNAgent(model=self.model, nb_actions=nb_actions, memory=memory,
                             nb_steps_warmup=self.nb_steps_warmup, target_model_update=1e-2, policy=policy,
-                            batch_size=self.batch_size, train_interval=self.train_interval)
+                            processor=CustomProcessor(), batch_size=self.batch_size, train_interval=self.train_interval)
         self.dqn.compile(optimizer=Adam(learning_rate=self.lr), metrics=['mae'])
 
     def start_step_policy(self, observation):
@@ -98,13 +97,7 @@ class Player:
         # initiate training loop
         self.dqn.fit(self.env, nb_steps=self.nb_steps, visualize=False,
                      verbose=2)
-
-        # Save the architecture
-        #dqn_json = self.model.to_json()
-        #with open("dqn_{}_json.json".format(env_name), "w") as json_file:
-        #    json.dump(dqn_json, json_file)
-
-        # After training is done, we save the final weights.
+        
         self.dqn.save_weights('dqn_{}_weights.h5'.format(env_name), overwrite=True)
 
         # Finally, evaluate our algorithm for 5 episodes.
@@ -113,11 +106,7 @@ class Player:
     def load(self, env_name):
         """Load a model"""
         # Load the architecture
-        #with open('dqn_{}_json.json'.format(env_name), 'r') as architecture_json:
-        #    dqn_json = json.load(architecture_json)
         
-        #self.model = model_from_json(dqn_json)
-        #self.model.load_weights('dqn_{}_weights.h5'.format(env_name))
         return("wip")
 
     def play(self, nb_episodes=5, render=False):
@@ -184,18 +173,3 @@ class CustomProcessor(Processor):
 
         return action
 
-
-class TrumpPolicy(BoltzmannQPolicy):
-    """Custom policy when making decision based on neural network."""
-
-    def select_action(self, q_values):
-        """Return the selected action"""
-        assert q_values.ndim == 1
-        q_values = q_values.astype('float64')
-        nb_actions = q_values.shape[0]
-
-        exp_values = np.exp(np.clip(q_values / self.tau, self.clip[0], self.clip[1]))
-        probs = exp_values / np.sum(exp_values)
-        action = np.random.choice(range(nb_actions), p=probs)
-        log.info(f"Chosen action by keras-rl {action} - probabilities: {probs}")
-        return action
