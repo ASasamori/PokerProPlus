@@ -21,7 +21,8 @@ options:
   --screenloglevel=<>       log level on screen
   --episodes=<>             number of episodes to play
   --stack=<>                starting stack for each player [default: 500].
-  --epochs=<>                max number of rotations of table 
+  --epochs=<>               max number of rotations of table 
+  --no_log                  limits what is being logged/printed [default: True]
 """
 
 import logging
@@ -46,6 +47,12 @@ def command_line_parser():
     else:
         print("Using no log file")
         logfile = None
+
+    if args['--no_log']:
+        to_log = False
+    else:
+        to_log = True
+        
     model_name = args['--name'] if args['--name'] else 'dqn1'
     screenloglevel = logging.INFO if not args['--screenloglevel'] else \
         getattr(logging, args['--screenloglevel'].upper())
@@ -60,7 +67,7 @@ def command_line_parser():
         runner = SelfPlay(render=args['--render'], num_episodes=num_episodes,
                           use_cpp_montecarlo=args['--use_cpp_montecarlo'],
                           funds_plot=args['--funds_plot'], epochs_max=(args['--epochs']),
-                          stack=int(args['--stack']))
+                          stack=int(args['--stack']), to_log=to_log)
 
         if args['random']:
             runner.random_agents()
@@ -90,7 +97,7 @@ def command_line_parser():
 class SelfPlay:
     """Orchestration of playing against itself"""
 
-    def __init__(self, render, num_episodes, use_cpp_montecarlo, funds_plot, epochs_max, stack=500):
+    def __init__(self, render, num_episodes, use_cpp_montecarlo, funds_plot, epochs_max, to_log, stack=500):
         """Initialize"""
         self.winner_in_episodes = []
         self.use_cpp_montecarlo = use_cpp_montecarlo
@@ -100,6 +107,7 @@ class SelfPlay:
         self.num_episodes = num_episodes
         self.stack = stack
         self.log = logging.getLogger(__name__)
+        self.to_log = to_log
 
         if epochs_max is not None:
             self.epochs_max = int(epochs_max)
@@ -111,7 +119,7 @@ class SelfPlay:
         from agents.agent_random import Player as RandomPlayer
         env_name = 'neuron_poker-v0'
         num_of_plrs = 6
-        self.env = gym.make(env_name, initial_stacks=self.stack, render=self.render)
+        self.env = gym.make(env_name, initial_stacks=self.stack, render=self.render,epochs_max=self.epochs_max, to_log=self.to_log)
         for _ in range(num_of_plrs):
             player = RandomPlayer()
             self.env.add_player(player)
@@ -123,7 +131,7 @@ class SelfPlay:
         from agents.agent_keypress import Player as KeyPressAgent
         env_name = 'neuron_poker-v0'
         num_of_plrs = 6
-        self.env = gym.make(env_name, initial_stacks=self.stack, render=self.render)
+        self.env = gym.make(env_name, initial_stacks=self.stack, render=self.render, epochs_max=self.epochs_max, to_log=self.to_log)
         for _ in range(num_of_plrs):
             player = KeyPressAgent()
             self.env.add_player(player)
@@ -135,7 +143,7 @@ class SelfPlay:
         from agents.agent_consider_equity import Player as EquityPlayer
         from agents.agent_random import Player as RandomPlayer
         env_name = 'neuron_poker-v0'
-        self.env = gym.make(env_name, initial_stacks=self.stack, render=self.render)
+        self.env = gym.make(env_name, initial_stacks=self.stack, render=self.render, epochs_max=self.epochs_max, to_log=self.to_log)
         self.env.add_player(EquityPlayer(name='equity/50/50', min_call_equity=.5, min_bet_equity=-.5))
         self.env.add_player(EquityPlayer(name='equity/50/80', min_call_equity=.8, min_bet_equity=-.8))
         self.env.add_player(EquityPlayer(name='equity/70/70', min_call_equity=.7, min_bet_equity=-.7))
@@ -163,7 +171,7 @@ class SelfPlay:
 
         for improvement_round in range(improvement_rounds):
             env_name = 'neuron_poker-v0'
-            self.env = gym.make(env_name, initial_stacks=self.stack, render=self.render, epochs_max=self.epochs_max)
+            self.env = gym.make(env_name, initial_stacks=self.stack, render=self.render, epochs_max=self.epochs_max, to_log=self.to_log)
             for i in range(6):
                 self.env.add_player(EquityPlayer(name=f'Equity/{calling[i]}/{betting[i]}',
                                                  min_call_equity=calling[i],
@@ -193,7 +201,7 @@ class SelfPlay:
         from agents.agent_random import Player as RandomPlayer
         env_name = 'neuron_poker-v0'
         env = gym.make(env_name, initial_stacks=self.stack, funds_plot=self.funds_plot, render=self.render,
-                       use_cpp_montecarlo=self.use_cpp_montecarlo, epochs_max=self.epochs_max)
+                       use_cpp_montecarlo=self.use_cpp_montecarlo, epochs_max=self.epochs_max, to_log=self.to_log)
 
         np.random.seed(123)
         env.seed(123)
@@ -216,7 +224,7 @@ class SelfPlay:
         from agents.agent_keras_rl_dqn import Player as DQNPlayer
         from agents.agent_random import Player as RandomPlayer
         env_name = 'neuron_poker-v0'
-        self.env = gym.make(env_name, initial_stacks=self.stack, render=self.render)
+        self.env = gym.make(env_name, initial_stacks=self.stack, render=self.render, epochs_max=self.epochs_max, to_log=self.to_log)
         self.env.add_player(EquityPlayer(name='equity/50/50', min_call_equity=.5, min_bet_equity=.5))
         self.env.add_player(EquityPlayer(name='equity/50/80', min_call_equity=.8, min_bet_equity=.8))
         self.env.add_player(EquityPlayer(name='equity/70/70', min_call_equity=.7, min_bet_equity=.7))
@@ -235,7 +243,7 @@ class SelfPlay:
         from agents.agent_custom_q1 import Player as Custom_Q1
         from agents.agent_random import Player as RandomPlayer
         env_name = 'neuron_poker-v0'
-        self.env = gym.make(env_name, initial_stacks=self.stack, render=self.render)
+        self.env = gym.make(env_name, initial_stacks=self.stack, render=self.render, epochs_max=self.epochs_max, to_log=self.to_log)
         # self.env.add_player(EquityPlayer(name='equity/50/50', min_call_equity=.5, min_bet_equity=-.5))
         # self.env.add_player(EquityPlayer(name='equity/50/80', min_call_equity=.8, min_bet_equity=-.8))
         # self.env.add_player(EquityPlayer(name='equity/70/70', min_call_equity=.7, min_bet_equity=-.7))
@@ -264,7 +272,7 @@ class SelfPlay:
         from agents.agent_random import Player as RandomPlayer
         env_name = 'neuron_poker-v0'
         env = gym.make(env_name, initial_stacks=self.stack, funds_plot=self.funds_plot, render=self.render,
-                       use_cpp_montecarlo=self.use_cpp_montecarlo)
+                       use_cpp_montecarlo=self.use_cpp_montecarlo, epochs_max=self.epochs_max, to_log=self.to_log)
 
         np.random.seed(123)
         env.seed(123)

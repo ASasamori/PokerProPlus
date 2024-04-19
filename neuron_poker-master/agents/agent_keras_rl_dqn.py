@@ -40,7 +40,7 @@ class Player:
     """Mandatory class with the player methods"""
 
     def __init__(self, name='DQN', load_model=None, env=None, window_length=1, nb_max_start_steps=1,
-                 train_interval=100, nb_steps_warmup=50, nb_steps=100000, memory_limit=None, batch_size=500,
+                 train_interval=100, nb_steps_warmup=50, nb_steps=100, memory_limit=None, batch_size=500,
                  enable_double_dqn=False, lr=1e-3):
         """Initialization of an agent"""
         self.equity_alive = 0

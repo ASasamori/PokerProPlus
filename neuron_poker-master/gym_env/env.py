@@ -66,7 +66,7 @@ class HoldemTable(Env):
 
     def __init__(self, initial_stacks=100, small_blind=1, big_blind=2, render=False, funds_plot=True,
                  max_raises_per_player_round=2, use_cpp_montecarlo=False, raise_illegal_moves=False,
-                 calculate_equity=False, epochs_max = None):
+                 calculate_equity=False, epochs_max = None, to_log = True):
         """
         The table needs to be initialized once at the beginning
 
@@ -80,6 +80,7 @@ class HoldemTable(Env):
             max_raises_per_player_round (int): max raises per round per player
             epochs_max: max epoch to run the simulation for
         """
+        self.to_log = to_log
         if use_cpp_montecarlo:
             import cppimport
             calculator = cppimport.imp("tools.montecarlo_cpp.pymontecarlo")
@@ -405,11 +406,11 @@ class HoldemTable(Env):
             self.stage_data[rnd].stack_at_action[pos] = self.current_player.stack / (self.big_blind * 100)
 
         self.player_cycle.update_alive()
-
-        log.info(
-            f"Seat {self.current_player.seat} ({self.current_player.name}): {action} - Remaining stack: {self.current_player.stack}, "
-            f"Round pot: {self.current_round_pot}, Community pot: {self.community_pot}, "
-            f"player pot: {self.player_pots[self.current_player.seat]}")
+        if(self.to_log):
+            log.info(
+                f"Seat {self.current_player.seat} ({self.current_player.name}): {action} - Remaining stack: {self.current_player.stack}, "
+                f"Round pot: {self.current_round_pot}, Community pot: {self.community_pot}, "
+                f"player pot: {self.player_pots[self.current_player.seat]}")
 
     def _start_new_hand(self):
         """Deal new cards to players and reset table states."""
@@ -507,8 +508,9 @@ class HoldemTable(Env):
             self.player_cycle.idx += 1
 
         if self.stage == Stage.PREFLOP:
-            log.info("")
-            log.info("===Round: Stage: PREFLOP")
+            if(self.to_log):
+                log.info("")
+                log.info("===Round: Stage: PREFLOP")
             # max steps total will be adjusted again at bb
             self.player_cycle.max_steps_total = len(self.players) * self.max_raises_per_player_round + 2
 
@@ -524,7 +526,8 @@ class HoldemTable(Env):
             self._next_player()
 
         elif self.stage == Stage.SHOWDOWN:
-            log.info("Showdown")
+            if(self.to_log):
+                log.info("Showdown")
 
         else:
             raise RuntimeError()
@@ -588,7 +591,8 @@ class HoldemTable(Env):
                                                                         potential_winners[ix]],
                                                                        self.table_cards)
             winner_ix = potential_winner_idx[remaining_player_winner_ix]
-        log.info(f"Player {winner_ix} won: {winning_card_type}")
+        if(self.to_log):
+            log.info(f"Player {winner_ix} won: {winning_card_type}")
         return winner_ix
 
     def _award_winner(self, winner_ix):
@@ -600,7 +604,8 @@ class HoldemTable(Env):
         self.players[winner_ix].stack += total_winnings
         self.winner_ix = winner_ix
         if total_winnings < sum(self.player_max_win):
-            log.info("Returning side pots")
+            if(self.to_log):
+                log.info("Returning side pots")
             for i, player in enumerate(self.players):
                 player.stack += remains[i]
 
@@ -612,10 +617,12 @@ class HoldemTable(Env):
         self.current_player = self.player_cycle.next_player()
         if not self.current_player:
             if sum(self.player_cycle.alive) < 2:
-                log.info("Only one player remaining in round")
+                if(self.to_log):
+                    log.info("Only one player remaining in round")
                 self.stage = Stage.END_HIDDEN
             else:
-                log.info("End round - no current player returned")
+                if(self.to_log):
+                    log.info("End round - no current player returned")
                 self._end_round()
                 # todo: in some cases no new round should be initialized bc only one player is playing only it seems
                 self._initiate_round()
@@ -666,7 +673,8 @@ class HoldemTable(Env):
         _ = [self.deck.append(x + y) for x in values for y in suites]
 
     def _distribute_cards(self):
-        log.info(f"Dealer is at position {self.dealer_pos}")
+        if(self.to_log):
+            log.info(f"Dealer is at position {self.dealer_pos}")
         for player in self.players:
             player.cards = []
             if player.stack <= 0:
@@ -674,13 +682,15 @@ class HoldemTable(Env):
             for _ in range(2):
                 card = np.random.randint(0, len(self.deck))
                 player.cards.append(self.deck.pop(card))
-            log.info(f"Player {player.seat} got {player.cards} and ${player.stack}")
+            if(self.to_log):
+                log.info(f"Player {player.seat} got {player.cards} and ${player.stack}")
 
     def _distribute_cards_to_table(self, amount_of_cards):
         for _ in range(amount_of_cards):
             card = np.random.randint(0, len(self.deck))
             self.table_cards.append(self.deck.pop(card))
-        log.info(f"Cards on table: {self.table_cards}")
+        if(self.to_log):
+            log.info(f"Cards on table: {self.table_cards}")
 
     def render(self, mode='human'):
         """Render the current state"""
