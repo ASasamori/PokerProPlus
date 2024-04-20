@@ -75,8 +75,10 @@ def command_line_parser():
             improvement_rounds = int(args['--improvement_rounds'])
             runner.equity_self_improvement(improvement_rounds)
 
+        # Want to use new DQN model implemented for DL project
         elif args['dqn_train']:
-            runner.dqn_train_keras_rl(model_name)
+            # runner.dqn_train_keras_rl(model_name)
+            runner.dqn_train_new_pytorch_model(model_name)
 
         elif args['dqn_play']:
             runner.dqn_play_keras_rl(model_name)
@@ -226,6 +228,35 @@ class SelfPlay:
         dqn.play(nb_episodes=self.num_episodes, render=self.render)
 
     def dqn_train_custom_q1(self):
+        """Create 6 players, 4 of them equity based, 2 of them random"""
+        from agents.agent_consider_equity import Player as EquityPlayer
+        from agents.agent_custom_q1 import Player as Custom_Q1
+        from agents.agent_random import Player as RandomPlayer
+        env_name = 'neuron_poker-v0'
+        self.env = gym.make(env_name, initial_stacks=self.stack, render=self.render)
+        # self.env.add_player(EquityPlayer(name='equity/50/50', min_call_equity=.5, min_bet_equity=-.5))
+        # self.env.add_player(EquityPlayer(name='equity/50/80', min_call_equity=.8, min_bet_equity=-.8))
+        # self.env.add_player(EquityPlayer(name='equity/70/70', min_call_equity=.7, min_bet_equity=-.7))
+        self.env.add_player(EquityPlayer(name='equity/20/30', min_call_equity=.2, min_bet_equity=-.3))
+        # self.env.add_player(RandomPlayer())
+        self.env.add_player(RandomPlayer())
+        self.env.add_player(RandomPlayer())
+        self.env.add_player(Custom_Q1(name='Deep_Q1'))
+
+        for _ in range(self.num_episodes):
+            self.env.reset()
+            self.winner_in_episodes.append(self.env.winner_ix)
+
+        league_table = pd.Series(self.winner_in_episodes).value_counts()
+        best_player = league_table.index[0]
+
+        print("League Table")
+        print("============")
+        print(league_table)
+        print(f"Best Player: {best_player}")
+
+    # New PyTorch model created by Andrew Sasamori:
+    def dqn_train_new_pytorch_model(self):
         """Create 6 players, 4 of them equity based, 2 of them random"""
         from agents.agent_consider_equity import Player as EquityPlayer
         from agents.agent_custom_q1 import Player as Custom_Q1
