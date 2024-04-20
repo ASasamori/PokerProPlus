@@ -8,7 +8,7 @@ from keras import layers
 from keras.optimizers import Adam
 from keras.models import Sequential
 
-from rl.policy import EpsGreedyQPolicy,BoltzmannQPolicy
+from rl.policy import BoltzmannQPolicy,EpsGreedyQPolicy
 from rl.memory import SequentialMemory
 from rl.agents.dqn import DQNAgent
 from rl.core import Processor
@@ -19,7 +19,7 @@ autoplay = True  # play automatically if played against keras-rl
 log = logging.getLogger(__name__)
 
 
-def create_q_model(env):
+def create_q_model():
     return Sequential(
         [
             layers.Dense(512,activation='relu', input_shape=(328,)),
@@ -40,7 +40,7 @@ class Player:
     """Mandatory class with the player methods"""
 
     def __init__(self, name='DQN', load_model=None, env=None, window_length=1, nb_max_start_steps=1,
-                 train_interval=100, nb_steps_warmup=50, nb_steps=100, memory_limit=None, batch_size=500,
+                 train_interval=100, nb_steps_warmup=50, nb_steps=1, memory_limit=None, batch_size=500,
                  enable_double_dqn=False, lr=1e-3):
         """Initialization of an agent"""
         self.equity_alive = 0
@@ -73,7 +73,7 @@ class Player:
         self.env = env
 
         nb_actions = self.env.action_space.n
-        self.model = create_q_model(env)
+        self.model = create_q_model()
 
         # Finally, we configure and compile our agent. You can use every built-in Keras optimizer and
         # even the metrics!
@@ -106,21 +106,22 @@ class Player:
     def load(self, env_name):
         """Load a model"""
         # Load the architecture
-        
-        return("wip")
+        log.info("Loading Weights")
+        self.model = create_q_model()
+        self.model.load_weights('dqn_{}_weights.h5'.format(env_name))
 
     def play(self, nb_episodes=5, render=False):
         """Let the agent play"""
+        log.info("Playing")
         memory = SequentialMemory(limit=self.memory_limit, window_length=self.window_length)
-        policy = BoltzmannQPolicy()
+        policy = EpsGreedyQPolicy()
 
         nb_actions = self.env.action_space.n
 
         self.dqn = DQNAgent(model=self.model, nb_actions=nb_actions, memory=memory,
                             nb_steps_warmup=self.nb_steps_warmup, target_model_update=1e-2, policy=policy,
                             processor=CustomProcessor(),
-                            batch_size=self.batch_size, train_interval=self.train_interval,
-                            enable_double_dqn=self.enable_double_dqn)
+                            batch_size=self.batch_size, train_interval=self.train_interval)
         self.dqn.compile(optimizer=Adam(learning_rate=self.lr), metrics=['mae'])
 
         self.dqn.test(self.env, nb_episodes=nb_episodes, visualize=render)
