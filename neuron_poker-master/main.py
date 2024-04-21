@@ -76,7 +76,8 @@ def command_line_parser():
             runner.equity_self_improvement(improvement_rounds)
 
         elif args['dqn_train']:
-            runner.dqn_train_keras_rl(model_name)
+            # runner.dqn_train_keras_rl(model_name)
+            runner.dqn_train_pytorch(model_name)
 
         elif args['dqn_play']:
             runner.dqn_play_keras_rl(model_name)
@@ -206,6 +207,29 @@ class SelfPlay:
         dqn.initiate_agent(env)
         dqn.train(env_name=model_name)
 
+    def dqn_train_pytorch(self, model_name):
+        """Implementation of pytorch deep q learing."""
+        from agents.agent_consider_equity import Player as EquityPlayer
+        from agents.agent_pytorch_dqn import Player as DQNPlayer
+        from agents.agent_random import Player as RandomPlayer
+        env_name = 'neuron_poker-v0'
+        env = gym.make(env_name, initial_stacks=self.stack, funds_plot=self.funds_plot, render=self.render,
+                       use_cpp_montecarlo=self.use_cpp_montecarlo)
+
+        np.random.seed(123)
+        env.seed(123)
+        env.add_player(EquityPlayer(name='equity/50/70', min_call_equity=.5, min_bet_equity=.7))
+        env.add_player(EquityPlayer(name='equity/20/30', min_call_equity=.2, min_bet_equity=.3))
+        env.add_player(RandomPlayer(name='rand1'))
+        env.add_player(RandomPlayer(name='rand2'))
+        env.add_player(RandomPlayer(name='rand3'))
+        env.add_player(PlayerShell(name='pytorch', stack_size=self.stack))  # shell is used for callback to keras rl
+
+        env.reset()
+
+        dqn = DQNPlayer()
+        dqn.initiate_agent(env)
+        dqn.train(env_name=model_name)
     def dqn_play_keras_rl(self, model_name):
         """Create 6 players, one of them a trained DQN"""
         from agents.agent_consider_equity import Player as EquityPlayer

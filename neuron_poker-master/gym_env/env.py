@@ -657,6 +657,7 @@ class HoldemTable(Env):
             self.legal_moves.append(Action.CALL)
             self.legal_moves.append(Action.FOLD)
 
+        print("Stage is ",self.stage,self.current_player.name)
         if self.current_player.num_raises_in_street[self.stage] < self.max_raises_per_player_round:
             if self.current_player.stack >= self.big_blind - self.player_pots[self.current_player.seat]:
                 self.legal_moves.append(Action.RAISE_MIN)
