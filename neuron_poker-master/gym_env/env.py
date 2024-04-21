@@ -397,10 +397,10 @@ class HoldemTable(Env):
                 raise RuntimeError("Illegal action.")
             if contribution > self.min_call and not (action == Action.BIG_BLIND or action == Action.SMALL_BLIND):
                 self.player_cycle.mark_raiser()
-                
+
             if action not in [Action.CALL, Action.CHECK, Action.FOLD]:
                 self.latest_raise = contribution
-                
+
             self.current_player.stack -= contribution
             self.player_pots[self.current_player.seat] += contribution
             self.current_round_pot += contribution
@@ -487,10 +487,12 @@ class HoldemTable(Env):
 
         remaining_players = sum(player_alive)
         if (self.epochs_max != None and self.epochs == self.epochs_max):
+            print(f"max epochs of {self.epochs_max} reached")
             self._game_over()
             return True
-            
+
         if remaining_players < 2:
+            print("no more players")
             self._game_over()
             return True
         self.epochs += 1
@@ -657,7 +659,7 @@ class HoldemTable(Env):
             self.legal_moves.append(Action.CALL)
             self.legal_moves.append(Action.FOLD)
 
-        print("Stage is ",self.stage,self.current_player.name)
+        # print("Stage is ",self.stage,self.current_player.name)
         if self.current_player.num_raises_in_street[self.stage] < self.max_raises_per_player_round:
             if self.current_player.stack >= self.big_blind - self.player_pots[self.current_player.seat]:
                 self.legal_moves.append(Action.RAISE_MIN)
@@ -679,10 +681,10 @@ class HoldemTable(Env):
 
             if self.current_player.stack >= ((self.community_pot + self.current_round_pot) * 2) >= self.min_call:
                 self.legal_moves.append(Action.RAISE_2POT)
-            
+
             if self.current_player.stack >= 2*self.latest_raise - self.player_pots[self.current_player.seat]:
                 self.legal_moves.append(Action.RAISE_2X)
-                
+
             if self.current_player.stack > 0:
                 self.legal_moves.append(Action.ALL_IN)
 
@@ -799,7 +801,8 @@ class PlayerShell:
         self.num_raises_in_street = {Stage.PREFLOP: 0,
                                      Stage.FLOP: 0,
                                      Stage.TURN: 0,
-                                     Stage.RIVER: 0}
+                                     Stage.RIVER: 0,
+                                     }
 
     def __repr__(self):
         return f"Player {self.name} at seat {self.seat} with stack of {self.stack} and cards {self.cards}"

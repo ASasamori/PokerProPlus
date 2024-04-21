@@ -214,7 +214,7 @@ class SelfPlay:
         from agents.agent_random import Player as RandomPlayer
         env_name = 'neuron_poker-v0'
         env = gym.make(env_name, initial_stacks=self.stack, funds_plot=self.funds_plot, render=self.render,
-                       use_cpp_montecarlo=self.use_cpp_montecarlo)
+                       use_cpp_montecarlo=self.use_cpp_montecarlo, epochs_max = self.epochs_max)
 
         np.random.seed(123)
         env.seed(123)

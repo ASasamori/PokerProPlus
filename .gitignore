@@ -1,2 +1,6 @@
 
 /neuron_poker-master/.idea
+/neuron_poker-master/models
+/neuron_poker-master/agents/__pycache__
+/neuron_poker-master/log
+/neuron_poker-master/tools/__pycache__
