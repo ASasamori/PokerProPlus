@@ -28,8 +28,8 @@ log = logging.getLogger(__name__)
 class Player:
     """Mandatory class with the player methods"""
 
-    def __init__(self, name='DQN', load_model=None, env=None, window_length=1, nb_max_start_steps=1,
-                 train_interval=100, nb_steps_warmup=50, nb_steps=100000, memory_limit=None, batch_size=500,
+    def __init__(self, name='DQN', load_model=None, env=None, window_length=1, nb_max_start_steps=50,
+                 train_interval=100, nb_steps_warmup=100, nb_steps=1000, memory_limit=None, batch_size=500,
                  enable_double_dqn=False, lr=1e-3):
         """Initiaization of an agent"""
         self.equity_alive = 0
@@ -82,7 +82,7 @@ class Player:
         nb_actions = env.action_space.n
 
         self.dqn = DQNAgent(model=self.model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=self.nb_steps_warmup,
-                            target_model_update=1e-2, policy=policy,
+                            target_model_update=1e-2, policy=policy, nb_max_start_steps = self.nb_max_start_steps,
                             processor=CustomProcessor(),
                             batch_size=self.batch_size, train_interval=self.train_interval, enable_double_dqn=self.enable_double_dqn)
         self.dqn.compile(adam_v2(lr=self.lr), metrics=['mae'])
@@ -97,11 +97,11 @@ class Player:
     def train(self, env_name):
         """Train a model"""
         # initiate training loop
-        timestr = time.strftime("%Y%m%d-%H%M%S") + "_" + str(env_name)
-        tensorboard = TensorBoard(log_dir='./Graph/{}'.format(timestr), histogram_freq=0, write_graph=True,
+        tensorboard = TensorBoard(log_dir='./Graph', histogram_freq=0, write_graph=True,
                                   write_images=False)
 
-        self.dqn.fit(self.env, nb_max_start_steps=self.nb_max_start_steps, nb_steps=self.nb_steps, visualize=False, verbose=2,
+        self.dqn.fit(self.env, nb_max_start_steps=self.nb_max_start_steps, nb_steps=self.nb_steps, nb_steps_warmup=self.nb_steps_warmup, 
+                     visualize=False, verbose=2,
                      start_step_policy=self.start_step_policy, callbacks=[tensorboard])
 
         # Save the architecture
@@ -113,7 +113,7 @@ class Player:
         self.dqn.save_weights('dqn_{}_weights.h5'.format(env_name), overwrite=True)
 
         # Finally, evaluate our algorithm for 5 episodes.
-        self.dqn.test(self.env, nb_episodes=5, visualize=False)
+        #self.dqn.test(self.env, nb_episodes=1, visualize=False)
 
     def load(self, env_name):
         """Load a model"""
@@ -149,7 +149,7 @@ class Player:
         nb_actions = self.env.action_space.n
 
         self.dqn = DQNAgent(model=self.model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=self.nb_steps_warmup,
-                            target_model_update=1e-2, policy=policy,
+                            target_model_update=1e-2, policy=policy, nb_max_start_steps = self.nb_max_start_steps,
                             processor=CustomProcessor(),
                             batch_size=self.batch_size, train_interval=self.train_interval, enable_double_dqn=self.enable_double_dqn)
         self.dqn.compile(adam_v2(lr=self.lr), metrics=['mae'])  # pylint: disable=no-member

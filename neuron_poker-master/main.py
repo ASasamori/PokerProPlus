@@ -16,7 +16,7 @@ options:
   -r --render               render screen
   -c --use_cpp_montecarlo   use cpp implementation of equity calculator. Requires cpp compiler but is 500x faster
   -f --funds_plot           Plot funds at end of episode
-  --log                     log file
+  --log                     save output to log file
   --name=<>                 Name of the saved model
   --screenloglevel=<>       log level on screen
   --episodes=<>             number of episodes to play
@@ -236,6 +236,7 @@ class SelfPlay:
 
         dqn = DQNPlayer(load_model=model_name, env=self.env)
         dqn.play(nb_episodes=self.num_episodes, render=self.render)
+        
 
     def dqn_train_custom_q1(self):
         """Create 6 players, 4 of them equity based, 2 of them random"""

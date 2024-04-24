@@ -1,6 +1,6 @@
 """Groupier functions"""
 import logging
-
+from collections import defaultdict
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -123,6 +123,14 @@ class HoldemTable(Env):
         self.calculate_equity = calculate_equity
         self.epochs = 0
         self.epochs_max = epochs_max
+        # keras data for presentation
+        self.keras_action_counts = defaultdict(int)
+        self.print_histogram = True
+        self.print_test_rewards = True
+        self.keras_rewards = []
+        self.keras_reward_count = 0
+        self.keras_average_rewards = []
+
         # pots
         self.community_pot = 0
         self.current_round_pot = 9
@@ -135,7 +143,7 @@ class HoldemTable(Env):
         self.funds_history = None
         self.array_everything = None
         self.legal_moves = None
-        self.illegal_move_reward = -1
+        self.illegal_move_reward = -100
         self.action_space = Discrete(len(Action) - 2)
         self.first_action_for_hand = None
 
@@ -197,7 +205,7 @@ class HoldemTable(Env):
                     if self.first_action_for_hand[self.acting_agent] or self.done:
                         self.first_action_for_hand[self.acting_agent] = False
                         self._calculate_reward(action)
-
+        
         else:  # action received from player shell (e.g. keras rl, not autoplay)
             self._get_environment()  # get legal moves
             if Action(action) not in self.legal_moves:
@@ -208,7 +216,16 @@ class HoldemTable(Env):
                     self.first_action_for_hand[self.acting_agent] = False
                     self._calculate_reward(action)
 
+            # append reward for this action, total reward, and average reward
+            self.keras_rewards.append(self.reward)
+            self.keras_reward_count += self.reward
+            average_reward = self.keras_reward_count/len(self.keras_rewards)
+            self.keras_average_rewards.append(average_reward)
+
+            #log.info(f"Previous action reward for seat {self.acting_agent}: {self.reward}")
+            #log.info(f"Average action reward for seat {self.acting_agent}: {average_reward}")
             log.debug(f"Previous action reward for seat {self.acting_agent}: {self.reward}")
+            
         return self.array_everything, self.reward, self.done, self.info
 
     def _execute_step(self, action):
@@ -309,10 +326,9 @@ class HoldemTable(Env):
         #                   (1 - self.player_data.equity_to_river_alive) * self.player_pots[self.current_player.seat]
         _ = last_action
         if self.done:
-            won = 1 if not self._agent_is_autoplay(idx=self.winner_ix) else -1
+            won = 100 if not self._agent_is_autoplay(idx=self.winner_ix) else -1
             self.reward = self.initial_stacks * len(self.players) * won
-            log.debug(f"Keras-rl agent has reward {self.reward}")
-
+            #log.debug(f"Keras-rl agent has reward {self.reward}")
         elif len(self.funds_history) > 1:
             self.reward = self.funds_history.iloc[-1, self.acting_agent] - self.funds_history.iloc[
                 -2, self.acting_agent]
@@ -406,6 +422,9 @@ class HoldemTable(Env):
             self.stage_data[rnd].stack_at_action[pos] = self.current_player.stack / (self.big_blind * 100)
 
         self.player_cycle.update_alive()
+        if(self.current_player.name == 'keras-rl'):
+            self.keras_action_counts[action] += 1
+            #print(self.keras_action_counts)
         if(self.to_log):
             log.info(
                 f"Seat {self.current_player.seat} ({self.current_player.name}): {action} - Remaining stack: {self.current_player.stack}, "
@@ -481,16 +500,32 @@ class HoldemTable(Env):
         self.done = True
         player_names = [f"{i} - {player.name}" for i, player in enumerate(self.players)]
         self.funds_history.columns = player_names
-        if self.funds_plot:
-            self.funds_history.reset_index(drop=True).plot()
-        log.info(self.funds_history)
-        plt.show()
 
-        winner_in_episodes.append(self.winner_ix)
-        league_table = pd.Series(winner_in_episodes).value_counts()
-        best_player = league_table.index[0]
-        log.info(league_table)
-        log.info(f"Best Player: {best_player}")
+        fig, axes = plt.subplots(1, 3, figsize=(12, 5))
+
+        # print funds plot
+        if self.funds_plot:
+            self.funds_history.reset_index(drop=True).plot(ax=axes[0], xlabel='Hands', ylabel='Money', title='Funds History')
+
+        # print histogram of keras moves
+        if self.print_histogram:
+            actions = [str(action) for action in self.keras_action_counts.keys()]
+            counts = list(self.keras_action_counts.values())
+            axes[1].bar(actions, counts)
+            axes[1].set_xlabel('Actions')
+            axes[1].set_ylabel('Count')
+            axes[1].set_title('Histogram of Action Counts By Keras RL AI')
+            axes[1].tick_params(axis='x', rotation=45)  
+
+        # print plot of keras average rewards per action
+        if self.print_test_rewards:
+            axes[2].plot(range(len(self.keras_average_rewards)),self.keras_average_rewards)
+            axes[2].set_xlabel('Actions')
+            axes[2].set_ylabel('Rewards')
+            axes[2].set_title('Average Rewards per Actions')
+
+        plt.tight_layout()  
+        plt.show()
 
     def _initiate_round(self):
         """A new round (flop, turn, river) is initiated"""
