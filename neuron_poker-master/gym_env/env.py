@@ -472,6 +472,7 @@ class HoldemTable(Env):
         if remaining_players < 2:
             self._game_over()
             return True
+
         self.epochs += 1
         return False
 
@@ -485,7 +486,6 @@ class HoldemTable(Env):
             self.funds_history.reset_index(drop=True).plot()
         log.info(self.funds_history)
         plt.show()
-
         winner_in_episodes.append(self.winner_ix)
         league_table = pd.Series(winner_in_episodes).value_counts()
         best_player = league_table.index[0]

@@ -124,7 +124,9 @@ class SelfPlay:
             player = RandomPlayer()
             self.env.add_player(player)
 
-        self.env.reset()
+        for _ in range(5):  # Run for 5 episodes
+            # done = False
+            self.env.reset()
 
     def key_press_agents(self):
         """Create an environment with 6 key press agents"""
