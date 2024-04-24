@@ -10,6 +10,9 @@ from gym_env.enums import Action
 
 log = logging.getLogger(__name__)
 
+this_player_action_space = [Action.FOLD, Action.CHECK, Action.CALL, Action.RAISE_POT, Action.RAISE_HALF_POT,
+                            Action.RAISE_2POT]
+
 
 class DQNNetwork(nn.Module):
     def __init__(self, input_shape, nb_actions):
@@ -45,9 +48,10 @@ class DQNNetwork(nn.Module):
 
 class Player:
     """Mandatory class with the player methods"""
+
     def __init__(self, name='DQN', load_model=None, env=None, window_length=1, nb_max_start_steps=1,
                  train_interval=100, nb_steps_warmup=50, nb_steps=100000, memory_limit=None, batch_size=500,
-                 enable_double_dqn=False, lr=1e-3):
+                 enable_double_dqn=False, lr=1e-3,  gamma=0.99):
         """Initialization of an agent"""
         self.equity_alive = 0
         self.actions = []
@@ -57,6 +61,7 @@ class Player:
         self.autoplay = True
 
         # Hyperparameters we can adjust
+        self.gamma = gamma
         self.window_length = window_length
         self.nb_max_start_steps = nb_max_start_steps
         self.train_interval = train_interval
@@ -71,14 +76,15 @@ class Player:
         self.model = None
         self.env = env
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+        self.steps = 0
         if load_model:
             self.load(load_model)
 
     def initiate_agent(self, env):
         """Initiate a deep Q agent"""
         self.env = env
-        nb_actions = self.env.action_space.n
+        # nb_actions = self.env.action_space.n
+        nb_actions = len(this_player_action_space)
         input_shape = self.env.observation_space[0]
 
         self.model = DQNNetwork(input_shape, nb_actions).to(self.device)
@@ -88,7 +94,7 @@ class Player:
         self.loss_fn = nn.MSELoss()
         self.target_model = DQNNetwork(input_shape, nb_actions).to(self.device)
         self.target_model.load_state_dict(self.model.state_dict())
-        self.target_model_update_interval = 1e-2
+        self.target_model_update_interval = 5
 
     def train(self, env_name):
         """Train a model"""
@@ -106,7 +112,7 @@ class Player:
 
         # Training loop
         for episode in range(num_episodes):
-            state = self.env.reset()
+            state = self.env.array_everything
             epsilon = epsilon_final + (epsilon_start - epsilon_final) * np.exp(-episode / epsilon_decay)
             episode_reward = 0
             for step in range(max_steps):
@@ -115,16 +121,16 @@ class Player:
                     with torch.no_grad():
                         state_tensor = torch.tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0)
                         q_values = self.model(state_tensor).squeeze(0)
-                    action = q_values.max(0)[1].item()
+                    action = this_player_action_space[q_values.max(0)[1].item()]
                 else:
-                    action = self.env.action_space.sample()
+                    action = random.choice(this_player_action_space)
 
                 # Take the action and observe the next state and reward
                 next_state, reward, done, _ = self.env.step(action)
                 episode_reward += reward
 
                 # Store the transition in the replay memory
-                self.memory.append((state, action, reward, next_state, done))
+                self.memory.append((state, this_player_action_space.index(action), reward, next_state, done))
 
                 # Sample a batch from the replay memory and update the model
                 if len(self.memory) >= self.batch_size:
@@ -148,13 +154,14 @@ class Player:
         states, actions, rewards, next_states, dones = zip(*batch)
 
         # Convert to tensors
-        states = torch.tensor(states, dtype=torch.float32, device=self.device)
+        states = torch.tensor(np.array(states), dtype=torch.float32, device=self.device)
         actions = torch.tensor(actions, dtype=torch.long, device=self.device)
         rewards = torch.tensor(rewards, dtype=torch.float32, device=self.device)
-        next_states = torch.tensor(next_states, dtype=torch.float32, device=self.device)
+        next_states = torch.tensor(np.array(next_states), dtype=torch.float32, device=self.device)
         dones = torch.tensor(dones, dtype=torch.float32, device=self.device)
 
         # Compute the Q-values for the current states
+
         q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze(1)
 
         # Compute the target Q-values
@@ -221,13 +228,13 @@ class Player:
 
                 with torch.no_grad():
                     q_values = self.model(state)
-                action = self.policy.select_action(q_values)
+                action = this_player_action_space[ self.policy.select_action(q_values)]
 
                 next_state, reward, done, info = self.env.step(action)
                 episode_reward += reward
 
                 processed_info = self.processor.process_info(info)
-                self.memory.append((state, action, reward, next_state, done, processed_info))
+                self.memory.append((state, this_player_action_space.index(action), reward, next_state, done, processed_info))
 
                 state = next_state
 
@@ -238,8 +245,6 @@ class Player:
         _ = observation  # not using the observation for random decision
         _ = info
 
-        this_player_action_space = {Action.FOLD, Action.CHECK, Action.CALL, Action.RAISE_POT, Action.RAISE_HALF_POT,
-                                    Action.RAISE_2POT}
         _ = this_player_action_space.intersection(set(action_space))
 
         action = None
@@ -268,9 +273,10 @@ class TrumpPolicy:
 
         exp_values = torch.exp(torch.clamp(q_values / self.tau, min=self.clip[0], max=self.clip[1]))
         probs = exp_values / torch.sum(exp_values)
-        action = torch.multinomial(probs, 1).item()
+        action = this_player_action_space[ torch.multinomial(probs, 1).item()]
         log.info(f"Chosen action by PyTorch {action} - probabilities: {probs}")
         return action
+
 
 class CustomProcessor:
     """The agent and the environment"""

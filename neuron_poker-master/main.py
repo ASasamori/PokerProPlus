@@ -223,7 +223,7 @@ class SelfPlay:
         env.add_player(RandomPlayer(name='rand1'))
         env.add_player(RandomPlayer(name='rand2'))
         env.add_player(RandomPlayer(name='rand3'))
-        env.add_player(PlayerShell(name='pytorch', stack_size=self.stack))  # shell is used for callback to keras rl
+        env.add_player(PlayerShell(name='pytorch', stack_size=self.stack))  # shell is used for callback
 
         env.reset()
 

@@ -13,6 +13,8 @@ from gym_env.rendering import PygletWindow, WHITE, RED, GREEN, BLUE
 from tools.hand_evaluator import get_winner
 from tools.helper import flatten
 
+from datetime import datetime
+
 # pylint: disable=import-outside-toplevel
 
 log = logging.getLogger(__name__)
@@ -66,7 +68,7 @@ class HoldemTable(Env):
 
     def __init__(self, initial_stacks=100, small_blind=1, big_blind=2, render=False, funds_plot=True,
                  max_raises_per_player_round=2, use_cpp_montecarlo=False, raise_illegal_moves=False,
-                 calculate_equity=False, epochs_max = 10):
+                 calculate_equity=False, epochs_max=10):
         """
         The table needs to be initialized once at the beginning
 
@@ -135,13 +137,14 @@ class HoldemTable(Env):
         self.funds_history = None
         self.array_everything = None
         self.legal_moves = None
-        self.illegal_move_reward = -1
+        self.illegal_move_reward = -10
         self.action_space = Discrete(len(Action) - 2)
         self.first_action_for_hand = None
 
         self.raise_illegal_moves = raise_illegal_moves
 
     def reset(self):
+        logging.basicConfig(level=logging.WARNING)
         """Reset after game over."""
         self.observation = None
         self.reward = None
@@ -149,7 +152,7 @@ class HoldemTable(Env):
         self.done = False
         self.funds_history = pd.DataFrame()
         self.first_action_for_hand = [True] * len(self.players)
-
+        # self.stage = Stage.PREFLOP
         if not self.players:
             log.warning("No agents added. Add agents before resetting the environment.")
             return
@@ -434,6 +437,7 @@ class HoldemTable(Env):
             f"player pot: {self.player_pots[self.current_player.seat]}")
 
     def _start_new_hand(self):
+        print(f"start of hand {self.epochs} of {self.epochs_max}")
         """Deal new cards to players and reset table states."""
         self._save_funds_history()
 
@@ -481,12 +485,16 @@ class HoldemTable(Env):
         for idx, player in enumerate(self.players):
             if player.stack > 0:
                 player_alive.append(True)
-            else:
+            elif player.name != 'pytorch':
                 self.player_status.append(False)
                 self.player_cycle.deactivate_player(idx)
+            else:
+                print("PYTORCH RAN OUT OF MONEY RESETTING STACK")
+                player.stack = 500
+                player_alive.append(True)
 
         remaining_players = sum(player_alive)
-        if (self.epochs_max != None and self.epochs == self.epochs_max):
+        if self.epochs_max != None and self.epochs == self.epochs_max:
             print(f"max epochs of {self.epochs_max} reached")
             self._game_over()
             return True
@@ -506,6 +514,11 @@ class HoldemTable(Env):
         self.funds_history.columns = player_names
         if self.funds_plot:
             self.funds_history.reset_index(drop=True).plot()
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+
+        # Save to CSV
+        file_name = f'./history/data_{timestamp}.csv'
+        self.funds_history.to_csv(file_name, index=False)
         log.info(self.funds_history)
         plt.show()
 
@@ -514,6 +527,8 @@ class HoldemTable(Env):
         best_player = league_table.index[0]
         log.info(league_table)
         log.info(f"Best Player: {best_player}")
+        # self.stage = Stage.PREFLOP
+        # self.reset()
 
     def _initiate_round(self):
         """A new round (flop, turn, river) is initiated"""
@@ -682,7 +697,7 @@ class HoldemTable(Env):
             if self.current_player.stack >= ((self.community_pot + self.current_round_pot) * 2) >= self.min_call:
                 self.legal_moves.append(Action.RAISE_2POT)
 
-            if self.current_player.stack >= 2*self.latest_raise - self.player_pots[self.current_player.seat]:
+            if self.current_player.stack >= 2 * self.latest_raise - self.player_pots[self.current_player.seat]:
                 self.legal_moves.append(Action.RAISE_2X)
 
             if self.current_player.stack > 0:
