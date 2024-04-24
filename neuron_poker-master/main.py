@@ -92,7 +92,10 @@ def command_line_parser():
 class SelfPlay:
     """Orchestration of playing against itself"""
 
-    def __init__(self, render, num_episodes, use_cpp_montecarlo, funds_plot, epochs_max, stack=500):
+    #Changing stack to 200 for faster rending as of now:
+    # def __init__(self, render, num_episodes, use_cpp_montecarlo, funds_plot, epochs_max, stack=500):
+
+    def __init__(self, render, num_episodes, use_cpp_montecarlo, funds_plot, epochs_max, stack=200):
         """Initialize"""
         self.winner_in_episodes = []
         self.use_cpp_montecarlo = use_cpp_montecarlo
@@ -283,7 +286,7 @@ class SelfPlay:
         print("============")
         print(league_table)
         print(f"Best Player: {best_player}")
-    
+
     def tune_params(self):
         """Hypertune parameters of a dqn model"""
         from agents.agent_consider_equity import Player as EquityPlayer
@@ -307,7 +310,7 @@ class SelfPlay:
         #declare hyperparameters you want to tune and their array
         lr_values = [1e-3,1e-2,1e-1]
         window_length_values = [1,2,3]
-        
+
         for lr, window_length in itertools.product(lr_values,window_length_values):
             model_name = "model_" + str(lr) + "_" + str(window_length)
             dqn = DQNPlayer(name=model_name, lr=lr, window_length=window_length)
