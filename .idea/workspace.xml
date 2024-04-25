@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="de93d8ec-fb3c-4385-b267-377569676d28" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/neuron_poker-master/gym_env/env.py" beforeDir="false" afterPath="$PROJECT_DIR$/neuron_poker-master/gym_env/env.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/neuron_poker-master/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/neuron_poker-master/main.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -73,6 +73,7 @@
       <workItem from="1713893228068" duration="3299000" />
       <workItem from="1713898951597" duration="1651000" />
       <workItem from="1713920417547" duration="565000" />
+      <workItem from="1713979518875" duration="1808000" />
     </task>
     <servers />
   </component>

@@ -168,6 +168,10 @@ class HoldemTable(Env):
         if self._agent_is_autoplay() and not self.done:
             self.step('initial_player_autoplay')  # kick off the first action after bb by an autoplay agent
 
+        # Doesn't do anything:
+        # if self._game_over():
+        #     self.reset()
+
         return self.array_everything
 
     def step(self, action):  # pylint: disable=arguments-differ
@@ -481,11 +485,26 @@ class HoldemTable(Env):
         log.info("Game over.")
         self.done = True
         player_names = [f"{i} - {player.name}" for i, player in enumerate(self.players)]
-        self.funds_history.columns = player_names
-        if self.funds_plot:
-            self.funds_history.reset_index(drop=True).plot()
-        log.info(self.funds_history)
-        plt.show()
+        # self.funds_history.columns = player_names
+        # if self.funds_plot:
+        #     self.funds_history.reset_index(drop=True).plot()
+        # log.info(self.funds_history)
+        # plt.show()
+
+        # for game_idx in range(len(self.funds_history)):
+        for game_idx in range(3):
+            game_history = self.funds_history.iloc[game_idx]
+            game_history.index = player_names
+            if self.funds_plot:
+                plt.figure()  # Create a new figure for each game
+                game_history.plot()
+                plt.title(f"Game {game_idx + 1}")
+                plt.show(
+                    block=False)  # Show the plot without blocking execution
+
+            log.info(game_history)
+        # Code doesn't reach here since the plt.show() function stops it
+        log.info("Hello world 2")
         winner_in_episodes.append(self.winner_ix)
         league_table = pd.Series(winner_in_episodes).value_counts()
         best_player = league_table.index[0]
