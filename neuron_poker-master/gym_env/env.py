@@ -64,7 +64,7 @@ class PlayerData:
 class HoldemTable(Env):
     """Pokergame environment"""
 
-    def __init__(self, initial_stacks=100, small_blind=1, big_blind=2, render=False, funds_plot=True,
+    def __init__(self, initial_stacks=100, small_blind=10, big_blind=20, render=False, funds_plot=True,
                  max_raises_per_player_round=2, use_cpp_montecarlo=False, raise_illegal_moves=False,
                  calculate_equity=False, epochs_max = None, to_log = True):
         """
@@ -222,7 +222,7 @@ class HoldemTable(Env):
             average_reward = self.keras_reward_count/len(self.keras_rewards)
             self.keras_average_rewards.append(average_reward)
 
-            #log.info(f"Previous action reward for seat {self.acting_agent}: {self.reward}")
+            log.info(f"Previous action reward for seat {self.acting_agent}: {self.reward}")
             #log.info(f"Average action reward for seat {self.acting_agent}: {average_reward}")
             log.debug(f"Previous action reward for seat {self.acting_agent}: {self.reward}")
             
@@ -326,12 +326,18 @@ class HoldemTable(Env):
         #                   (1 - self.player_data.equity_to_river_alive) * self.player_pots[self.current_player.seat]
         _ = last_action
         if self.done:
-            won = 100 if not self._agent_is_autoplay(idx=self.winner_ix) else -1
+            won = 1000000 if not self._agent_is_autoplay(idx=self.winner_ix) else -1
             self.reward = self.initial_stacks * len(self.players) * won
             #log.debug(f"Keras-rl agent has reward {self.reward}")
+            
         elif len(self.funds_history) > 1:
-            self.reward = self.funds_history.iloc[-1, self.acting_agent] - self.funds_history.iloc[
+            reward = self.funds_history.iloc[-1, self.acting_agent] - self.funds_history.iloc[
                 -2, self.acting_agent]
+            if (reward == 0):
+                reward = -1
+            if (reward > 0):
+                reward = 100*reward
+            self.reward = reward
 
         else:
             pass
@@ -422,7 +428,7 @@ class HoldemTable(Env):
             self.stage_data[rnd].stack_at_action[pos] = self.current_player.stack / (self.big_blind * 100)
 
         self.player_cycle.update_alive()
-        if(self.current_player.name == 'keras-rl'):
+        if(self.current_player.name == 'keras-rl-dqn' or self.current_player.name == 'keras-rl-ddqn'):
             self.keras_action_counts[action] += 1
             #print(self.keras_action_counts)
         if(self.to_log):
@@ -430,6 +436,9 @@ class HoldemTable(Env):
                 f"Seat {self.current_player.seat} ({self.current_player.name}): {action} - Remaining stack: {self.current_player.stack}, "
                 f"Round pot: {self.current_round_pot}, Community pot: {self.community_pot}, "
                 f"player pot: {self.player_pots[self.current_player.seat]}")
+        if(self.current_player.stack == 0):
+                print("Out of money, adding money")
+                self.current_player.stack = 500
 
     def _start_new_hand(self):
         """Deal new cards to players and reset table states."""
@@ -500,6 +509,13 @@ class HoldemTable(Env):
         self.done = True
         player_names = [f"{i} - {player.name}" for i, player in enumerate(self.players)]
         self.funds_history.columns = player_names
+
+        log.info(self.funds_history)
+        winner_in_episodes.append(self.winner_ix)
+        league_table = pd.Series(winner_in_episodes).value_counts()
+        best_player = league_table.index[0]
+        log.info(league_table)
+        log.info(f"Best Player: {best_player}")
 
         fig, axes = plt.subplots(1, 3, figsize=(12, 5))
 
