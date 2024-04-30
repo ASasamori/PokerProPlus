@@ -76,11 +76,16 @@ def command_line_parser():
             runner.equity_self_improvement(improvement_rounds)
 
         elif args['dqn_train']:
-            # runner.dqn_train_keras_rl(model_name)
-            runner.dqn_train_pytorch(model_name)
+            runner.dqn_train_keras_rl(model_name)
 
         elif args['dqn_play']:
             runner.dqn_play_keras_rl(model_name)
+
+        elif args['dqn_play_pytorch']:
+            runner.dqn_play_pytorch(model_name)
+
+        elif args['dqn_train_pytorch']:
+            runner.dqn_play_pytorch(model_name)
 
         elif args['tune']:
             runner.tune_params()
@@ -108,7 +113,7 @@ class SelfPlay:
         from agents.agent_random import Player as RandomPlayer
         env_name = 'neuron_poker-v0'
         num_of_plrs = 6
-        self.env = gym.make(env_name, initial_stacks=self.stack, render=self.render)
+        self.env = gym.make(env_name, initial_stacks=self.stack, render=self.render, epochs_max=self.epochs_max)
         for _ in range(num_of_plrs):
             player = RandomPlayer()
             self.env.add_player(player)
@@ -218,13 +223,26 @@ class SelfPlay:
 
         np.random.seed(123)
         env.seed(123)
-        env.add_player(EquityPlayer(name='equity/50/70', min_call_equity=.5, min_bet_equity=.7))
+        # env.add_player(EquityPlayer(name='equity/50/70', min_call_equity=.5, min_bet_equity=.7))
+        # env.add_player(EquityPlayer(name='equity/20/30', min_call_equity=.2, min_bet_equity=.3))
+        # env.add_player(RandomPlayer(name='rand1'))
+        # env.add_player(RandomPlayer(name='rand2'))
+        # env.add_player(RandomPlayer(name='rand3'))
+        # env.add_player(PlayerShell(name='pytorch', stack_size=self.stack))  # shell is used for callback
+
+        env.add_player(EquityPlayer(name='equity/50/50', min_call_equity=.5, min_bet_equity=.5))
+        env.add_player(EquityPlayer(name='equity/50/80', min_call_equity=.8, min_bet_equity=.8))
+        env.add_player(EquityPlayer(name='equity/70/70', min_call_equity=.7, min_bet_equity=.7))
         env.add_player(EquityPlayer(name='equity/20/30', min_call_equity=.2, min_bet_equity=.3))
-        env.add_player(RandomPlayer(name='rand1'))
-        env.add_player(RandomPlayer(name='rand2'))
-        env.add_player(RandomPlayer(name='rand3'))
+        env.add_player(RandomPlayer())
         env.add_player(PlayerShell(name='pytorch', stack_size=self.stack))  # shell is used for callback
 
+        # env.add_player(PlayerShell(name='pytorch1', stack_size=self.stack))
+        # env.add_player(PlayerShell(name='pytorch2', stack_size=self.stack))
+        # env.add_player(PlayerShell(name='pytorch3', stack_size=self.stack))
+        # env.add_player(PlayerShell(name='pytorch4', stack_size=self.stack))
+        # env.add_player(PlayerShell(name='pytorch5', stack_size=self.stack))
+        # env.add_player(PlayerShell(name='pytorch6', stack_size=self.stack))  # shell is used for callback
         env.reset()
 
         dqn = DQNPlayer()
@@ -248,7 +266,32 @@ class SelfPlay:
 
         dqn = DQNPlayer(load_model=model_name, env=self.env)
         dqn.play(nb_episodes=self.num_episodes, render=self.render)
+    def dqn_play_pytorch(self, model_name):
+        """Create 6 players, one of them a trained DQN"""
+        from agents.agent_consider_equity import Player as EquityPlayer
+        from agents.agent_pytorch_dqn import Player as DQNPlayer
+        from agents.agent_random import Player as RandomPlayer
+        env_name = 'neuron_poker-v0'
+        env = gym.make(env_name, initial_stacks=self.stack, funds_plot=self.funds_plot, render=self.render,
+                       use_cpp_montecarlo=self.use_cpp_montecarlo, epochs_max=self.epochs_max)
 
+        # env.add_player(EquityPlayer(name='equity/50/70', min_call_equity=.5, min_bet_equity=.7))
+        # env.add_player(EquityPlayer(name='equity/20/30', min_call_equity=.2, min_bet_equity=.3))
+        # env.add_player(RandomPlayer(name='rand1'))
+        # env.add_player(RandomPlayer(name='rand2'))
+        # env.add_player(RandomPlayer(name='rand3'))
+        env.add_player(EquityPlayer(name='equity/50/50', min_call_equity=.5, min_bet_equity=.5))
+        env.add_player(EquityPlayer(name='equity/50/80', min_call_equity=.8, min_bet_equity=.8))
+        env.add_player(EquityPlayer(name='equity/70/70', min_call_equity=.7, min_bet_equity=.7))
+        env.add_player(EquityPlayer(name='equity/20/30', min_call_equity=.2, min_bet_equity=.3))
+        env.add_player(RandomPlayer())
+        env.add_player(PlayerShell(name='pytorch', stack_size=self.stack))  # shell is used for callback
+
+        env.reset()
+
+        dqn = DQNPlayer(load_model=model_name, env=env)
+
+        dqn.play(nb_episodes=self.num_episodes)
     def dqn_train_custom_q1(self):
         """Create 6 players, 4 of them equity based, 2 of them random"""
         from agents.agent_consider_equity import Player as EquityPlayer

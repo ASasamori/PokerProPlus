@@ -24,13 +24,14 @@ class Player:
         incremen1 = 0.1
         increment2 = 0.2
 
+        # if (
+        #     equity_alive > self.min_bet_equity + increment2
+        #     and Action.ALL_IN in action_space
+        # ):
+        #     action = Action.ALL_IN
+        #
+        # el
         if (
-            equity_alive > self.min_bet_equity + increment2
-            and Action.ALL_IN in action_space
-        ):
-            action = Action.ALL_IN
-
-        elif (
             equity_alive > self.min_bet_equity + incremen1
             and Action.RAISE_2POT in action_space
         ):

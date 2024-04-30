@@ -66,9 +66,9 @@ class PlayerData:
 class HoldemTable(Env):
     """Pokergame environment"""
 
-    def __init__(self, initial_stacks=100, small_blind=1, big_blind=2, render=False, funds_plot=True,
+    def __init__(self, initial_stacks=100, small_blind=10, big_blind=20, render=False, funds_plot=True,
                  max_raises_per_player_round=2, use_cpp_montecarlo=False, raise_illegal_moves=False,
-                 calculate_equity=False, epochs_max=10):
+                 calculate_equity=True, epochs_max=10):
         """
         The table needs to be initialized once at the beginning
 
@@ -193,6 +193,7 @@ class HoldemTable(Env):
                 self._get_environment()
                 # call agent's action method
                 action = self.current_player.agent_obj.action(self.legal_moves, self.observation, self.info)
+
                 if Action(action) not in self.legal_moves:
                     self._illegal_move(action)
                 else:
@@ -282,7 +283,7 @@ class HoldemTable(Env):
         arr2 = np.array(list(flatten(self.community_data.__dict__.values())))
         arr3 = np.array([list(flatten(sd.__dict__.values())) for sd in self.stage_data]).flatten()
         # arr_legal_only = np.array(self.community_data.legal_moves).flatten()
-
+        # print("player data", arr1)
         self.array_everything = np.concatenate([arr1, arr2, arr3]).flatten()
 
         self.observation = self.array_everything
@@ -481,7 +482,7 @@ class HoldemTable(Env):
         """Check if only one player has money left"""
         player_alive = []
         self.player_cycle.new_hand_reset()
-
+        reset = False
         for idx, player in enumerate(self.players):
             if player.stack > 0:
                 player_alive.append(True)
@@ -489,9 +490,14 @@ class HoldemTable(Env):
                 self.player_status.append(False)
                 self.player_cycle.deactivate_player(idx)
             else:
+                reset = True
                 print("PYTORCH RAN OUT OF MONEY RESETTING STACK")
                 player.stack = 500
                 player_alive.append(True)
+        if reset:
+            for player in self.players:
+                if player.stack > 0:
+                    player.stack = 500
 
         remaining_players = sum(player_alive)
         if self.epochs_max != None and self.epochs == self.epochs_max:

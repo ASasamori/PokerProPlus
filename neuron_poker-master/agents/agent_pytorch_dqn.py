@@ -11,7 +11,7 @@ from gym_env.enums import Action
 log = logging.getLogger(__name__)
 
 this_player_action_space = [Action.FOLD, Action.CHECK, Action.CALL, Action.RAISE_POT, Action.RAISE_HALF_POT,
-                            Action.RAISE_2POT]
+                            Action.RAISE_2POT, Action.BIG_BLIND]
 
 
 class DQNNetwork(nn.Module):
@@ -50,7 +50,7 @@ class Player:
     """Mandatory class with the player methods"""
 
     def __init__(self, name='DQN', load_model=None, env=None, window_length=1, nb_max_start_steps=1,
-                 train_interval=100, nb_steps_warmup=50, nb_steps=100000, memory_limit=None, batch_size=500,
+                 train_interval=100, nb_steps_warmup=50, nb_steps=100000, memory_limit=None, batch_size=50,
                  enable_double_dqn=False, lr=1e-3,  gamma=0.99):
         """Initialization of an agent"""
         self.equity_alive = 0
@@ -78,6 +78,7 @@ class Player:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.steps = 0
         if load_model:
+            self.initiate_agent(env)
             self.load(load_model)
 
     def initiate_agent(self, env):
@@ -106,31 +107,62 @@ class Player:
         # Set the number of episodes and other training parameters
         num_episodes = self.nb_steps // 500  # We set a fixed number of steps for training
         max_steps = 500
-        epsilon_start = 1.0
+        epsilon_start = .9
         epsilon_final = 0.01
         epsilon_decay = 500
 
         # Training loop
         for episode in range(num_episodes):
-            state = self.env.array_everything
             epsilon = epsilon_final + (epsilon_start - epsilon_final) * np.exp(-episode / epsilon_decay)
             episode_reward = 0
             for step in range(max_steps):
                 # Select an action based on the current policy
+                state = self.env.array_everything
+
+                self.legal_moves_limit = []
+
+                # find all possible actions for bot
+                for move in self.env.legal_moves:
+                    if move in this_player_action_space:
+                        self.legal_moves_limit.append(move)
+
+                # print("state is ", state)
+                # print("epsilon",epsilon, "step",step)
                 if random.random() > epsilon:
+                    # print("step")
                     with torch.no_grad():
                         state_tensor = torch.tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0)
+                        # print(state_tensor)
                         q_values = self.model(state_tensor).squeeze(0)
+                    # print("q_values", q_values, "max", q_values.max(0))
                     action = this_player_action_space[q_values.max(0)[1].item()]
+                    # pick next highest q
+                    n = 0
+                    while action not in self.legal_moves_limit:
+                        # print("q len", len(q_values))
+                        # print("n",n)
+                        action = this_player_action_space[torch.kthvalue(q_values, len(q_values) - n)[1]]
+                        n += 1
+                        # print(action)
+
+                    # next closest choice
+                    # if action not in self.legal_moves_limit:
+                    #     action = min(self.legal_moves_limit, key=lambda x: abs(x - action))
                 else:
-                    action = random.choice(this_player_action_space)
+                    action = random.choice(self.legal_moves_limit)
+                action = action.value
+
+
+
+
+
 
                 # Take the action and observe the next state and reward
-                next_state, reward, done, _ = self.env.step(action)
+                next_state, reward, done, _ = self.env.step(Action(action))
                 episode_reward += reward
 
                 # Store the transition in the replay memory
-                self.memory.append((state, this_player_action_space.index(action), reward, next_state, done))
+                self.memory.append((state, this_player_action_space.index(Action(action)), reward, next_state, done))
 
                 # Sample a batch from the replay memory and update the model
                 if len(self.memory) >= self.batch_size:
@@ -184,8 +216,8 @@ class Player:
     def load(self, env_name):
         """Load a model"""
         model_dir = os.path.join("./models", env_name)
-        model_path = os.path.join(model_dir, "final_model.pt")
-
+        model_path = model_dir
+        print(self.model)
         if os.path.exists(model_path):
             self.model.load_state_dict(torch.load(model_path, map_location=self.device))
             print(f"Loaded model from {model_path}")
@@ -194,61 +226,50 @@ class Player:
 
     def play(self, nb_episodes=5, render=False):
         """Let the agent play"""
+        num_episodes = self.nb_steps // 500  # We set a fixed number of steps for training
+        max_steps = 500
         self.memory = deque(maxlen=self.memory_limit)
         self.policy = TrumpPolicy()  # You'll need to translate this class
 
-        class CustomProcessor:
-            """The agent and the environment"""
+        for episode in range(num_episodes):
+            state = self.env.array_everything
 
-            def process_state_batch(self, batch):
-                """
-                Given a state batch, remove the second dimension to feed into the network
-                """
-                return np.squeeze(batch, axis=1)
-
-            def process_info(self, info):
-                processed_info = info['player_data']
-                if 'stack' in processed_info:
-                    processed_info = {'x': 1}
-                return processed_info
-
-        self.processor = CustomProcessor()
-
-        for episode in range(nb_episodes):
-            state = self.env.reset()
             episode_reward = 0
-            done = False
-
-            while not done:
-                if render:
-                    self.env.render()
-
-                state = self.processor.process_state_batch([state])
-                state = torch.tensor(state, dtype=torch.float32, device=self.device)
+            for step in range(max_steps):
+                # Select an action based on the current policy
 
                 with torch.no_grad():
-                    q_values = self.model(state)
-                action = this_player_action_space[ self.policy.select_action(q_values)]
+                    state_tensor = torch.tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0)
+                    q_values = self.model(state_tensor).squeeze(0)
+                action = this_player_action_space[q_values.max(0)[1].item()]
 
-                next_state, reward, done, info = self.env.step(action)
+                action = action.value
+                self.legal_moves_limit = []
+
+                for move in self.env.legal_moves:
+                    if move in this_player_action_space:
+                        self.legal_moves_limit.append(move.value)
+                if action not in self.legal_moves_limit:
+                    action = min(self.legal_moves_limit, key=lambda x: abs(x - action))
+                # Take the action and observe the next state and reward
+                next_state, reward, done, _ = self.env.step(Action(action))
                 episode_reward += reward
-
-                processed_info = self.processor.process_info(info)
-                self.memory.append((state, this_player_action_space.index(action), reward, next_state, done, processed_info))
-
                 state = next_state
+
+                if done:
+                    break
 
             print(f"Episode {episode}: Reward = {episode_reward}")
 
-    def action(self, action_space, observation, info):
-        """Mandatory method that calculates the move based on the observation array and the action space."""
-        _ = observation  # not using the observation for random decision
-        _ = info
-
-        _ = this_player_action_space.intersection(set(action_space))
-
-        action = None
-        return action
+    # def action(self, action_space, observation, info):
+    #     """Mandatory method that calculates the move based on the observation array and the action space."""
+    #     _ = observation  # not using the observation for random decision
+    #     _ = info
+    #
+    #     _ = this_player_action_space.intersection(set(action_space))
+    #
+    #     action = None
+    #     return action
 
 
 class TrumpPolicy:
