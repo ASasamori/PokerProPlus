@@ -7,7 +7,9 @@ Usage:
   main.py selfplay consider_equity [options]
   main.py selfplay equity_improvement --improvement_rounds=<> [options]
   main.py selfplay dqn_train [options]
+  main.py selfplay dqn_train_pytorch [options]
   main.py selfplay dqn_play [options]
+  main.py selfplay dqn_play_pytorch [options]
   main.py learn_table_scraping [options]
   main.py selfplay tune [options]
 
@@ -85,7 +87,7 @@ def command_line_parser():
             runner.dqn_play_pytorch(model_name)
 
         elif args['dqn_train_pytorch']:
-            runner.dqn_play_pytorch(model_name)
+            runner.dqn_train_pytorch(model_name)
 
         elif args['tune']:
             runner.tune_params()
@@ -280,12 +282,21 @@ class SelfPlay:
         # env.add_player(RandomPlayer(name='rand1'))
         # env.add_player(RandomPlayer(name='rand2'))
         # env.add_player(RandomPlayer(name='rand3'))
+        # env.add_player(PlayerShell(name='pytorch', stack_size=self.stack))  # shell is used for callback
+
         env.add_player(EquityPlayer(name='equity/50/50', min_call_equity=.5, min_bet_equity=.5))
         env.add_player(EquityPlayer(name='equity/50/80', min_call_equity=.8, min_bet_equity=.8))
         env.add_player(EquityPlayer(name='equity/70/70', min_call_equity=.7, min_bet_equity=.7))
         env.add_player(EquityPlayer(name='equity/20/30', min_call_equity=.2, min_bet_equity=.3))
         env.add_player(RandomPlayer())
         env.add_player(PlayerShell(name='pytorch', stack_size=self.stack))  # shell is used for callback
+
+        # env.add_player(PlayerShell(name='pytorch1', stack_size=self.stack))
+        # env.add_player(PlayerShell(name='pytorch2', stack_size=self.stack))
+        # env.add_player(PlayerShell(name='pytorch3', stack_size=self.stack))
+        # env.add_player(PlayerShell(name='pytorch4', stack_size=self.stack))
+        # env.add_player(PlayerShell(name='pytorch5', stack_size=self.stack))
+        # env.add_player(PlayerShell(name='pytorch', stack_size=self.stack))
 
         env.reset()
 
