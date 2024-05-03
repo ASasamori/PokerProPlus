@@ -36,13 +36,14 @@ def create_q_model():
             layers.Dense(8, activation='linear')
         ]
     )
-
 class Player:
     """Mandatory class with the player methods"""
 
-    def __init__(self, name='DQN', load_model=None, env=None, window_length=1, nb_max_start_steps=20,
-                 train_interval=100, nb_steps_warmup=50, nb_steps=1000, memory_limit=None, batch_size=500,
-                 enable_double_dqn=False, lr=1e-3):
+    def __init__(self, name='DDQN', load_model=None, env=None, window_length=1,
+                 nb_max_start_steps=20,
+                 train_interval=100, nb_steps_warmup=50, nb_steps=1000,
+                 memory_limit=None, batch_size=500,
+                 enable_double_dqn=True, lr=1e-3):
         """Initialization of an agent"""
         self.equity_alive = 0
         self.actions = []
@@ -57,12 +58,13 @@ class Player:
         self.train_interval = train_interval
         self.nb_steps_warmup = nb_steps_warmup
         self.nb_steps = nb_steps
+
         self.memory_limit = memory_limit if memory_limit is not None else int(nb_steps / 2)
         self.batch_size = batch_size
         self.enable_double_dqn = enable_double_dqn
         self.lr = lr
 
-        self.dqn = None
+        self.ddqn = None
         self.model = None
         self.env = env
 
@@ -73,29 +75,19 @@ class Player:
         """Initiate a deep Q agent"""
         self.env = env
 
-        nb_actions = self.env.action_space.nf
+        nb_actions = self.env.action_space.n
+        self.model = create_q_model()
 
-        self.model = Sequential()
-        self.model.add(Dense(512, activation='relu', input_shape=env.observation_space))
-        self.model.add(Dropout(0.2))
-        self.model.add(Dense(512, activation='relu'))
-        self.model.add(Dropout(0.2))
-        self.model.add(Dense(512, activation='relu'))
-        self.model.add(Dropout(0.2))
-        self.model.add(Dense(nb_actions, activation='linear'))
-
-        # Johnson's Changes
-        # nb_actions = self.env.action_space.n
-        # self.model = create_q_model()
         # Finally, we configure and compile our agent. You can use every built-in Keras optimizer and
         # even the metrics!
-        memory = SequentialMemory(limit=self.memory_limit, window_length=self.window_length)
-        policy = EpsGreedyQPolicy(eps=0.2)
 
-        self.dqn = DQNAgent(model=self.model, nb_actions=nb_actions, memory=memory,
+        memory = SequentialMemory(limit=self.memory_limit, window_length=self.window_length)
+        policy = EpsGreedyQPolicy(eps=0.3)
+        print("ddqn working")
+        self.ddqn = DQNAgent(model=self.model, nb_actions=nb_actions, memory=memory,
                             nb_steps_warmup=self.nb_steps_warmup, target_model_update=1e-2, policy=policy,
                             processor=CustomProcessor(), batch_size=self.batch_size, train_interval=self.train_interval)
-        self.dqn.compile(optimizer=Adam(learning_rate=self.lr), metrics=['mae'])
+        self.ddqn.compile(optimizer=Adam(learning_rate=self.lr), metrics=['mae'])
 
     def start_step_policy(self, observation):
         """Custom policy for random decisions for warm-up."""
@@ -108,10 +100,11 @@ class Player:
         """Train a model"""
         # initiate training loop
 
-        self.dqn.fit(self.env, nb_max_start_steps=self.nb_max_start_steps, nb_steps=self.nb_steps, visualize=False,
+
+        self.ddqn.fit(self.env, nb_max_start_steps=self.nb_max_start_steps, nb_steps=self.nb_steps, visualize=False,
                      verbose=2, start_step_policy=self.start_step_policy)
         
-        self.dqn.save_weights('dqn_{}_weights.h5'.format(env_name), overwrite=True)
+        self.ddqn.save_weights('ddqn_{}_weights.h5'.format(env_name), overwrite=True)
         
         # print graph
         plt.plot(range(len(self.env.keras_average_rewards)),self.env.keras_average_rewards)
@@ -119,6 +112,7 @@ class Player:
         plt.ylabel('Rewards')
         plt.title('Average Rewards per Actions')
         plt.show()
+
         # Finally, evaluate our algorithm for 5 episodes.
         # self.dqn.test(self.env, nb_episodes=5, visualize=False)
         
@@ -128,28 +122,29 @@ class Player:
         # Load the architecture
         log.info("Loading Weights")
         self.model = create_q_model()
-        self.model.load_weights('dqn_{}_weights.h5'.format(env_name))
+        self.model.load_weights('ddqn_{}_weights.h5'.format(env_name))
 
     def play(self, nb_episodes=5, render=False):
         """Let the agent play"""
         log.info("Playing")
         memory = SequentialMemory(limit=self.memory_limit, window_length=self.window_length)
-        policy = EpsGreedyQPolicy(eps=0.2)
+        policy = EpsGreedyQPolicy(eps=0.3)
             
         nb_actions = self.env.action_space.n
 
-        self.dqn = DQNAgent(model=self.model, nb_actions=nb_actions, memory=memory,
+        self.ddqn = DQNAgent(model=self.model, nb_actions=nb_actions, memory=memory,
                             nb_steps_warmup=self.nb_steps_warmup, target_model_update=1e-2, policy=policy,
                             processor=CustomProcessor(),
                             batch_size=self.batch_size, train_interval=self.train_interval)
-        self.dqn.compile(optimizer=Adam(learning_rate=self.lr), metrics=['mae'])
+        self.ddqn.compile(optimizer=Adam(learning_rate=self.lr), metrics=['mae'])
 
-        self.dqn.test(self.env, nb_episodes=nb_episodes, visualize=render)
+        self.ddqn.test(self.env, nb_episodes=nb_episodes, visualize=render)
 
     def action(self, action_space, observation, info):
         """Mandatory method that calculates the move based on the observation array and the action space."""
         _ = observation  # not using the observation for random decision
         _ = info
+
 
         this_player_action_space = {Action.FOLD, Action.CHECK, Action.CALL, Action.RAISE_POT, Action.RAISE_HALF_POT,
                                     Action.RAISE_2POT}
@@ -164,7 +159,6 @@ class CustomProcessor(Processor):
     def __init__(self):
         """Initialize properties"""
         self.legal_moves_limit = None
-        
 
     def process_state_batch(self, batch):
         """Remove second dimension to make it possible to pass it into CNN"""
@@ -181,6 +175,7 @@ class CustomProcessor(Processor):
         """Find nearest legal action"""
 
         if 'legal_moves_limit' in self.__dict__ and self.legal_moves_limit is not None:
+
             self.legal_moves_limit = [move.value for move in self.legal_moves_limit]
             if action not in self.legal_moves_limit:
                 for i in range(5):
@@ -191,6 +186,6 @@ class CustomProcessor(Processor):
                     if action in self.legal_moves_limit:
                         break
                     action += i
-        
-        return action
 
+
+        return action

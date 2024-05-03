@@ -52,3 +52,44 @@ Our goal largely consists of making a successful AI to play poker. This AI will 
  - A custom poker game environment
  - UI for the bot playing
  - A game of poker between bots built with different models
+
+
+# Structures:
+### Agents (Folder):
+The agents folder contains different policies for the agent and training logics (if applicable).
+##### agent_consider_equity.py:
+This file provides a Player class template for agents that solely considers the amount of equity to output an action based on conditional logics.  
+##### agent_keras_rl_ddqn.py:
+This file provides a Player class template that offers starting code for implementing Double Deep Q Network RL approach. It also contains visualization functions for plotting results. 
+##### agent_keras_rl_dqn.py:
+This file provides a Player class template that offers starting code for implementing Deep Q Network RL approach. It also contains visualization functions for plotting results. 
+##### agent_random.py:
+This file provides a Player class template that outputs an action randomly without any computation or learning involved. 
+##### agent_pytorch_dqn.py:
+This file provides a Player class template that implements a Deep Q Network RL approach using pytorch and follows a similar format to the keras bot. 
+##### agent_keypress.py
+This file provides a Player class template so a person can play in the game against the bots by providing keyboard inputs.
+
+
+### gym_env (Folder):
+gym_env is the inherited library from the original neuron_poker repo. It provides the game environment setup for the agent to obtain observations from. It also provides a set of actions that agents can take. 
+#### env.py
+This file handles simulating a poker game including taking in the actions, finding legal actions, calculating rewards.
+##### cycle.py
+This file handles cycling between players, rotating the positions (dealer, Big blind Small blind), whose turn it currently is, how many moves per hand.
+##### enums.py 
+This files stores the enumerate for the Actions and Stages of the game.
+##### rendering.py
+This file displays the game so one can see the players actions and the cards more easily.
+
+# Usage
+- Install Python 3.11, (can also use PyCharm IDE).
+- Install Poetry with ``curl -sSL https://install.python-poetry.org | python3 -``
+- Create a virtual environment with ``poetry env use python3.11``
+- Activate it with ``poetry shell``
+- Install all required packages with ``poetry install --no-root``
+- Run 6 random players playing against each other:
+  ``poetry run python main.py selfplay random --render`` or
+- To manually control the players:``poetry run python main.py selfplay keypress --render``
+- In order to use the C++ version of the equity calculator, you will also need to install Visual Studio 2019 (or GCC over Cygwin may work as well). To use it, use the -c option when running main.py.
+- For more advanced users: ``poetry run python main.py selfplay dqn_train -c`` will start training the deep Q agent with C++ Monte Carlo for faster calculation

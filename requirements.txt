@@ -9,5 +9,5 @@ docopt==0.6.2
 pydocstyle==6.3.0
 matplotlib==3.8.2
 mpld3==0.5.10
-tensorflow>=2.0.0
-keras-rl>=0.4.2
+tensorflow==2.12.3
+keras==2.12.0
