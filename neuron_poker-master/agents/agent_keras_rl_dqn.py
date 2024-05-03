@@ -1,37 +1,48 @@
-"""Player based on a trained neural network"""
-# pylint: disable=wrong-import-order,invalid-name,import-error,missing-function-docstring
 import logging
 import time
-
 import numpy as np
-
-from gym_env.enums import Action
-
 import tensorflow as tf
 import json
+import keras
+from keras import layers
+from keras.optimizers import Adam
+from keras.models import Sequential
 
-from tensorflow.keras.models import Sequential, model_from_json
-from tensorflow.keras.callbacks import TensorBoard
-from tensorflow.keras.layers import Dense, Dropout
-from tensorflow.keras.optimizers import Adam
-
-from rl.policy import BoltzmannQPolicy
+from rl.policy import BoltzmannQPolicy,EpsGreedyQPolicy
 from rl.memory import SequentialMemory
-from rl.agents import DQNAgent
+from rl.agents.dqn import DQNAgent
 from rl.core import Processor
+from gym_env.enums import Action
 
 autoplay = True  # play automatically if played against keras-rl
 
 log = logging.getLogger(__name__)
 
 
+def create_q_model():
+    return Sequential(
+        [
+            layers.Dense(512,activation='relu', input_shape=(328,)),
+            layers.Dropout(0.2),
+            layers.Dense(256,activation='relu'),
+            layers.Dropout(0.2),
+            layers.Dense(128,activation='relu'),
+            layers.Dropout(0.2),
+            layers.Dense(64,activation='relu'),
+            layers.Dropout(0.2),
+            layers.Flatten(),
+            layers.Dense(32, activation='relu'),
+            layers.Dense(8, activation='linear')
+        ]
+    )
+
 class Player:
     """Mandatory class with the player methods"""
 
     def __init__(self, name='DQN', load_model=None, env=None, window_length=1, nb_max_start_steps=1,
-                 train_interval=100, nb_steps_warmup=50, nb_steps=100000, memory_limit=None, batch_size=500,
+                 train_interval=100, nb_steps_warmup=50, nb_steps=1, memory_limit=None, batch_size=500,
                  enable_double_dqn=False, lr=1e-3):
-        """Initiaization of an agent"""
+        """Initialization of an agent"""
         self.equity_alive = 0
         self.actions = []
         self.last_action_in_stage = ''
@@ -58,9 +69,7 @@ class Player:
             self.load(load_model)
 
     def initiate_agent(self, env):
-        """initiate a deep Q agent"""
-        tf.compat.v1.disable_eager_execution()
-
+        """Initiate a deep Q agent"""
         self.env = env
 
         nb_actions = self.env.action_space.nf
@@ -74,21 +83,21 @@ class Player:
         self.model.add(Dropout(0.2))
         self.model.add(Dense(nb_actions, activation='linear'))
 
+        # Johnson's Changes
+        # nb_actions = self.env.action_space.n
+        # self.model = create_q_model()
         # Finally, we configure and compile our agent. You can use every built-in Keras optimizer and
         # even the metrics!
         memory = SequentialMemory(limit=self.memory_limit, window_length=self.window_length)
-        policy = TrumpPolicy()
+        policy = EpsGreedyQPolicy(eps=0.1)
 
-        nb_actions = env.action_space.n
-
-        self.dqn = DQNAgent(model=self.model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=self.nb_steps_warmup,
-                            target_model_update=1e-2, policy=policy,
-                            processor=CustomProcessor(),
-                            batch_size=self.batch_size, train_interval=self.train_interval, enable_double_dqn=self.enable_double_dqn)
-        self.dqn.compile(Adam(lr=self.lr), metrics=['mae'])
+        self.dqn = DQNAgent(model=self.model, nb_actions=nb_actions, memory=memory,
+                            nb_steps_warmup=self.nb_steps_warmup, target_model_update=1e-2, policy=policy,
+                            processor=CustomProcessor(), batch_size=self.batch_size, train_interval=self.train_interval)
+        self.dqn.compile(optimizer=Adam(learning_rate=self.lr), metrics=['mae'])
 
     def start_step_policy(self, observation):
-        """Custom policy for random decisions for warm up."""
+        """Custom policy for random decisions for warm-up."""
         log.info("Random action")
         _ = observation
         action = self.env.action_space.sample()
@@ -97,19 +106,9 @@ class Player:
     def train(self, env_name):
         """Train a model"""
         # initiate training loop
-        timestr = time.strftime("%Y%m%d-%H%M%S") + "_" + str(env_name)
-        tensorboard = TensorBoard(log_dir='./Graph/{}'.format(timestr), histogram_freq=0, write_graph=True,
-                                  write_images=False)
-
-        self.dqn.fit(self.env, nb_max_start_steps=self.nb_max_start_steps, nb_steps=self.nb_steps, visualize=False, verbose=2,
-                     start_step_policy=self.start_step_policy, callbacks=[tensorboard])
-
-        # Save the architecture
-        dqn_json = self.model.to_json()
-        with open("dqn_{}_json.json".format(env_name), "w") as json_file:
-            json.dump(dqn_json, json_file)
-
-        # After training is done, we save the final weights.
+        self.dqn.fit(self.env, nb_steps=self.nb_steps, visualize=False,
+                     verbose=2)
+        
         self.dqn.save_weights('dqn_{}_weights.h5'.format(env_name), overwrite=True)
 
         # Finally, evaluate our algorithm for 5 episodes.
@@ -117,46 +116,28 @@ class Player:
 
     def load(self, env_name):
         """Load a model"""
-
         # Load the architecture
-        with open('dqn_{}_json.json'.format(env_name), 'r') as architecture_json:
-            dqn_json = json.load(architecture_json)
-
-        self.model = model_from_json(dqn_json)
+        log.info("Loading Weights")
+        self.model = create_q_model()
         self.model.load_weights('dqn_{}_weights.h5'.format(env_name))
 
     def play(self, nb_episodes=5, render=False):
         """Let the agent play"""
+        log.info("Playing")
         memory = SequentialMemory(limit=self.memory_limit, window_length=self.window_length)
-        policy = TrumpPolicy()
-
-        class CustomProcessor(Processor):  # pylint: disable=redefined-outer-name
-            """The agent and the environment"""
-
-            def process_state_batch(self, batch):
-                """
-                Given a state batch, I want to remove the second dimension, because it's
-                useless and prevents me from feeding the tensor into my CNN
-                """
-                return np.squeeze(batch, axis=1)
-
-            def process_info(self, info):
-                processed_info = info['player_data']
-                if 'stack' in processed_info:
-                    processed_info = {'x': 1}
-                return processed_info
+        policy = EpsGreedyQPolicy()
 
         nb_actions = self.env.action_space.n
 
-        self.dqn = DQNAgent(model=self.model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=self.nb_steps_warmup,
-                            target_model_update=1e-2, policy=policy,
+        self.dqn = DQNAgent(model=self.model, nb_actions=nb_actions, memory=memory,
+                            nb_steps_warmup=self.nb_steps_warmup, target_model_update=1e-2, policy=policy,
                             processor=CustomProcessor(),
-                            batch_size=self.batch_size, train_interval=self.train_interval, enable_double_dqn=self.enable_double_dqn)
-        self.dqn.compile(Adam(lr=self.lr), metrics=['mae'])  # pylint: disable=no-member
+                            batch_size=self.batch_size, train_interval=self.train_interval)
+        self.dqn.compile(optimizer=Adam(learning_rate=self.lr), metrics=['mae'])
 
         self.dqn.test(self.env, nb_episodes=nb_episodes, visualize=render)
 
-    def action(self, action_space, observation, info):  # pylint: disable=no-self-use
+    def action(self, action_space, observation, info):
         """Mandatory method that calculates the move based on the observation array and the action space."""
         _ = observation  # not using the observation for random decision
         _ = info
@@ -169,38 +150,16 @@ class Player:
         return action
 
 
-class TrumpPolicy(BoltzmannQPolicy):
-    """Custom policy when making decision based on neural network."""
-
-    def select_action(self, q_values):
-        """Return the selected action
-
-        # Arguments
-            q_values (np.ndarray): List of the estimations of Q for each action
-
-        # Returns
-            Selection action
-        """
-        assert q_values.ndim == 1
-        q_values = q_values.astype('float64')
-        nb_actions = q_values.shape[0]
-
-        exp_values = np.exp(np.clip(q_values / self.tau, self.clip[0], self.clip[1]))
-        probs = exp_values / np.sum(exp_values)
-        action = np.random.choice(range(nb_actions), p=probs)
-        log.info(f"Chosen action by keras-rl {action} - probabilities: {probs}")
-        return action
-
 
 class CustomProcessor(Processor):
     """The agent and the environment"""
 
     def __init__(self):
-        """initizlie properties"""
+        """Initialize properties"""
         self.legal_moves_limit = None
 
     def process_state_batch(self, batch):
-        """Remove second dimension to make it possible to pass it into cnn"""
+        """Remove second dimension to make it possible to pass it into CNN"""
         return np.squeeze(batch, axis=1)
 
     def process_info(self, info):
@@ -208,7 +167,7 @@ class CustomProcessor(Processor):
             self.legal_moves_limit = info['legal_moves']
         else:
             self.legal_moves_limit = None
-        return {'x': 1}  # on arrays allowed it seems
+        return {'x': 1}  # Only arrays allowed it seems
 
     def process_action(self, action):
         """Find nearest legal action"""
@@ -225,3 +184,4 @@ class CustomProcessor(Processor):
                     action += i
 
         return action
+
