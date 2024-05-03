@@ -67,4 +67,38 @@ This file provides a Player class template that offers starting code for impleme
 This file provides a Player class template that offers starting code for implementing Deep Q Network RL approach. It also contains visualization functions for plotting results. 
 ##### agent_random.py:
 This file provides a Player class template that outputs an action randomly without any computation or learning involved. 
+##### agent_pytorch_dqn.py:
+
+# Structures:
+### Agents (Folder):
+The agents folder contains different policies for the agent and training logics (if applicable).
+##### agent_consider_equity.py:
+This file provides a Player class template for agents that solely considers the amount of equity to output an action based on conditional logics. 
+##### agent_custom_q1.py:
+This file provides a Player class template with a neural network using Keras RL library. Detailed implementations were not created because this was not used in our training. 
+##### agent_keras_rl_ddqn.py:
+This file provides a Player class template that offers starting code for implementing Double Deep Q Network RL approach. It also contains visualization functions for plotting results. 
+##### agent_keras_rl_dqn.py:
+This file provides a Player class template that offers starting code for implementing Deep Q Network RL approach. It also contains visualization functions for plotting results. 
+##### agent_random.py:
+This file provides a Player class template that outputs an action randomly without any computation or learning involved. 
 ##### agent_keypass.py:
+
+# Structures:
+### Agents (Folder):
+The agents folder contains different policies for the agent and training logics (if applicable).
+##### agent_consider_equity.py:
+This file provides a Player class template for agents that solely considers the amount of equity to output an action based on conditional logics. 
+##### agent_custom_q1.py:
+This file provides a Player class template with a neural network using Keras RL library. Detailed implementations were not created because this was not used in our training. 
+##### agent_keras_rl_ddqn.py:
+This file provides a Player class template that offers starting code for implementing Double Deep Q Network RL approach. It also contains visualization functions for plotting results. 
+##### agent_keras_rl_dqn.py:
+This file provides a Player class template that offers starting code for implementing Deep Q Network RL approach. It also contains visualization functions for plotting results. 
+##### agent_random.py:
+This file provides a Player class template that outputs an action randomly without any computation or learning involved. 
+##### agent_keypass.py:
+This file provides a Player class template that implement Deep Q Network RL approach through PyTorch library. 
+
+### gym_env:
+gym_env is the inherited library from the original neuron_poker repo. It provides the game environment setup for the agent to obtain observations from. It also provides a set of actions that agents can take. 
