@@ -73,3 +73,17 @@ This file provides a Player class template so a person can play in the game agai
 
 ### gym_env:
 gym_env is the inherited library from the original neuron_poker repo. It provides the game environment setup for the agent to obtain observations from. It also provides a set of actions that agents can take. 
+
+
+# Usage
+- Install Python 3.11, (can also use PyCharm IDE).
+- Install Poetry with ``curl -sSL https://install.python-poetry.org | python3 -``
+- Create a virtual environment with ``poetry env use python3.11``
+- Activate it with ``poetry shell``
+- Install all required packages with ``poetry install --no-root``
+- Run 6 random players playing against each other:
+  ``poetry run python main.py selfplay random --render`` or
+- To manually control the players:``poetry run python main.py selfplay keypress --render``
+- Example of genetic algorithm with self improvement: ``poetry run python main.py selfplay equity_improvement --improvement_rounds=20 --episodes=10``
+- In order to use the C++ version of the equity calculator, you will also need to install Visual Studio 2019 (or GCC over Cygwin may work as well). To use it, use the -c option when running main.py.
+- For more advanced users: ``poetry run python main.py selfplay dqn_train -c`` will start training the deep Q agent with C++ Monte Carlo for faster calculation
