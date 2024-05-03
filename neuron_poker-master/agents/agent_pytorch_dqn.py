@@ -90,7 +90,7 @@ class Player:
 
         self.model = DQNNetwork(input_shape, nb_actions).to(self.device)
         self.memory = deque(maxlen=self.memory_limit)
-        self.policy = TrumpPolicy()  # You'll need to translate this class
+        self.policy = TrumpPolicy()
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
         self.loss_fn = nn.MSELoss()
         self.target_model = DQNNetwork(input_shape, nb_actions).to(self.device)
@@ -151,10 +151,6 @@ class Player:
                 else:
                     action = random.choice(self.legal_moves_limit)
                 action = action.value
-
-
-
-
 
 
                 # Take the action and observe the next state and reward
