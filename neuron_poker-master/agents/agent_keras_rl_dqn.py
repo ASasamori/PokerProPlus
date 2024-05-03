@@ -2,13 +2,14 @@ import logging
 import time
 import numpy as np
 import tensorflow as tf
-import json
-import keras
+import matplotlib.pyplot as plt
+
 from keras import layers
 from keras.optimizers import Adam
 from keras.models import Sequential
+from keras.callbacks import TensorBoard
 
-from rl.policy import BoltzmannQPolicy,EpsGreedyQPolicy
+from rl.policy import EpsGreedyQPolicy
 from rl.memory import SequentialMemory
 from rl.agents.dqn import DQNAgent
 from rl.core import Processor
@@ -39,8 +40,8 @@ def create_q_model():
 class Player:
     """Mandatory class with the player methods"""
 
-    def __init__(self, name='DQN', load_model=None, env=None, window_length=1, nb_max_start_steps=1,
-                 train_interval=100, nb_steps_warmup=50, nb_steps=1, memory_limit=None, batch_size=500,
+    def __init__(self, name='DQN', load_model=None, env=None, window_length=1, nb_max_start_steps=20,
+                 train_interval=100, nb_steps_warmup=50, nb_steps=1000, memory_limit=None, batch_size=500,
                  enable_double_dqn=False, lr=1e-3):
         """Initialization of an agent"""
         self.equity_alive = 0
@@ -89,7 +90,7 @@ class Player:
         # Finally, we configure and compile our agent. You can use every built-in Keras optimizer and
         # even the metrics!
         memory = SequentialMemory(limit=self.memory_limit, window_length=self.window_length)
-        policy = EpsGreedyQPolicy(eps=0.1)
+        policy = EpsGreedyQPolicy(eps=0.2)
 
         self.dqn = DQNAgent(model=self.model, nb_actions=nb_actions, memory=memory,
                             nb_steps_warmup=self.nb_steps_warmup, target_model_update=1e-2, policy=policy,
@@ -106,14 +107,22 @@ class Player:
     def train(self, env_name):
         """Train a model"""
         # initiate training loop
-        self.dqn.fit(self.env, nb_steps=self.nb_steps, visualize=False,
-                     verbose=2)
+
+        self.dqn.fit(self.env, nb_max_start_steps=self.nb_max_start_steps, nb_steps=self.nb_steps, visualize=False,
+                     verbose=2, start_step_policy=self.start_step_policy)
         
         self.dqn.save_weights('dqn_{}_weights.h5'.format(env_name), overwrite=True)
-
+        
+        # print graph
+        plt.plot(range(len(self.env.keras_average_rewards)),self.env.keras_average_rewards)
+        plt.xlabel('Actions')
+        plt.ylabel('Rewards')
+        plt.title('Average Rewards per Actions')
+        plt.show()
         # Finally, evaluate our algorithm for 5 episodes.
-        self.dqn.test(self.env, nb_episodes=5, visualize=False)
-
+        # self.dqn.test(self.env, nb_episodes=5, visualize=False)
+        
+        
     def load(self, env_name):
         """Load a model"""
         # Load the architecture
@@ -125,8 +134,8 @@ class Player:
         """Let the agent play"""
         log.info("Playing")
         memory = SequentialMemory(limit=self.memory_limit, window_length=self.window_length)
-        policy = EpsGreedyQPolicy()
-
+        policy = EpsGreedyQPolicy(eps=0.2)
+            
         nb_actions = self.env.action_space.n
 
         self.dqn = DQNAgent(model=self.model, nb_actions=nb_actions, memory=memory,
@@ -146,10 +155,8 @@ class Player:
                                     Action.RAISE_2POT}
         _ = this_player_action_space.intersection(set(action_space))
 
-        action = None
+        action = None 
         return action
-
-
 
 class CustomProcessor(Processor):
     """The agent and the environment"""
@@ -157,6 +164,7 @@ class CustomProcessor(Processor):
     def __init__(self):
         """Initialize properties"""
         self.legal_moves_limit = None
+        
 
     def process_state_batch(self, batch):
         """Remove second dimension to make it possible to pass it into CNN"""
@@ -171,6 +179,7 @@ class CustomProcessor(Processor):
 
     def process_action(self, action):
         """Find nearest legal action"""
+
         if 'legal_moves_limit' in self.__dict__ and self.legal_moves_limit is not None:
             self.legal_moves_limit = [move.value for move in self.legal_moves_limit]
             if action not in self.legal_moves_limit:
@@ -182,6 +191,6 @@ class CustomProcessor(Processor):
                     if action in self.legal_moves_limit:
                         break
                     action += i
-
+        
         return action
 
