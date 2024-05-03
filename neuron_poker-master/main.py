@@ -250,7 +250,6 @@ class SelfPlay:
         dqn.initiate_agent(env)
         dqn.train(env_name=model_name)
 
-<<<<<<< HEAD
     def dqn_train_pytorch(self, model_name):
         """Implementation of pytorch deep q learing."""
         from agents.agent_consider_equity import Player as EquityPlayer
