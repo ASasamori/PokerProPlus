@@ -68,19 +68,19 @@ This file provides a Player class template that outputs an action randomly witho
 ##### agent_pytorch_dqn.py:
 This file provides a Player class template that implements a Deep Q Network RL approach using pytorch and follows a similar format to the keras bot. 
 ##### agent_keypress.py
-This file provides a Player class template so a person can play in the game against the bots by providing keyboard inputs
+This file provides a Player class template so a person can play in the game against the bots by providing keyboard inputs.
 
 
 ### gym_env (Folder):
 gym_env is the inherited library from the original neuron_poker repo. It provides the game environment setup for the agent to obtain observations from. It also provides a set of actions that agents can take. 
 #### env.py
-This file handles simulating a poker game including taking in the actions, finding legal actions, calculating rewards
+This file handles simulating a poker game including taking in the actions, finding legal actions, calculating rewards.
 ##### cycle.py
-This file handles cycling between players, rotating the positions (dealer, Big blind Small blind), whose turn it currently is, how many moves per hand
+This file handles cycling between players, rotating the positions (dealer, Big blind Small blind), whose turn it currently is, how many moves per hand.
 ##### enums.py 
-This files stores the enumerate for the Actions and Stages of the game
+This files stores the enumerate for the Actions and Stages of the game.
 ##### rendering.py
-This file displays the game so one can see the players actions and the cards more easily
+This file displays the game so one can see the players actions and the cards more easily.
 
 # Usage
 - Install Python 3.11, (can also use PyCharm IDE).
