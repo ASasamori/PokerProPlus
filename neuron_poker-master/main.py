@@ -6,19 +6,16 @@ Usage:
   main.py selfplay keypress [options]
   main.py selfplay consider_equity [options]
   main.py selfplay equity_improvement --improvement_rounds=<> [options]
-<<<<<<< HEAD
   main.py selfplay dqn_train [options]
   main.py selfplay dqn_train_pytorch [options]
   main.py selfplay dqn_play [options]
   main.py selfplay dqn_play_pytorch [options]
-=======
   main.py selfplay keras_dqn_train [options]
   main.py selfplay keras_dqn_play [options]
   main.py selfplay pytorch_dqn_train [options]
   main.py selfplay pytorch_dqn_play [options]
   main.py selfplay keras_ddqn_train [options]
   main.py selfplay keras_ddqn_play [options]
->>>>>>> origin/Johnson
   main.py learn_table_scraping [options]
   main.py selfplay tune [options]
 
