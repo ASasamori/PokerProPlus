@@ -559,6 +559,8 @@ class HoldemTable(Env):
         # Initial Head:
         if self.funds_plot:
             self.funds_history.reset_index(drop=True).plot()
+            plt.xlabel("Hands")
+            plt.ylabel("Stack")
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 
         # Save to CSV
