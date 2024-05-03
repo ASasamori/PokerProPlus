@@ -63,7 +63,7 @@ class Player:
 
         self.env = env
 
-        nb_actions = self.env.action_space.n
+        nb_actions = self.env.action_space.nf
 
         self.model = Sequential()
         self.model.add(Dense(512, activation='relu', input_shape=env.observation_space))
