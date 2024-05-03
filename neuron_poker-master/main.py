@@ -102,6 +102,9 @@ def command_line_parser():
         elif args['dqn_train_pytorch']:
             runner.dqn_train_pytorch(model_name)
 
+        elif args['dqn_play_multiple']:
+            runner.dqn_play_multiple()
+
         elif args['tune']:
             runner.tune_params()
 
@@ -368,9 +371,38 @@ class SelfPlay:
 
         env.reset()
 
-        dqn = DQNPlayer(load_model=model_name, env=self.env)
+        dqn = DQNPlayer(load_model=model_name, env=env)
         dqn.play(nb_episodes=self.num_episodes, render=self.render)
 
+    def dqn_play_multiple(self):
+        """Implementation of pytorch deep q learing."""
+        from agents.agent_consider_equity import Player as EquityPlayer
+        from agents.agent_pytorch_dqn import Player as DQNPlayer
+        from agents.agent_keras_rl_dqn import Player as DQNPlayer1
+        from agents.agent_keras_rl_ddqn import Player as DDQNPlayer2
+        from agents.agent_random import Player as RandomPlayer
+        env_name = 'neuron_poker-v0'
+        self.env = gym.make(env_name, initial_stacks=self.stack, funds_plot=self.funds_plot, render=self.render,
+                       use_cpp_montecarlo=self.use_cpp_montecarlo, epochs_max=self.epochs_max)
+
+        np.random.seed(123)
+        self.env.seed(123)
+        self.env.add_player(EquityPlayer(name='equity/50/50', min_call_equity=.5, min_bet_equity=.5))
+        self.env.add_player(EquityPlayer(name='equity/50/80', min_call_equity=.5, min_bet_equity=.8))
+        self.env.add_player(RandomPlayer(name='rand1'))
+        self.env.add_player(PlayerShell(name='keras-rl-ddqn', stack_size=self.stack))
+
+        self.env.add_player(PlayerShell(name='keras-rl-dqn', stack_size=self.stack))
+        self.env.add_player(PlayerShell(name='pytorch', stack_size=self.stack))  # shell is used for callback
+
+        self.env.reset()
+
+        dqn = DQNPlayer(load_model="20240430-183307_dqn1/model_4.pt", env=self.env)
+        dqn.play(nb_episodes=self.num_episodes, render=self.render)
+        dqn1 = DQNPlayer1(load_model="KERAS MODEL NAME", env=self.env)
+        dqn1.play(nb_episodes=self.num_episodes, render=self.render)
+        dqn2 = DDQNPlayer2(load_model="DDQN MODEL NAME", env=self.env)
+        dqn2.play(nb_episodes=self.num_episodes, render=self.render)
     def ddqn_train_keras_rl(self, model_name):
         """Implementation of kreras-rl deep q learing."""
         from agents.agent_consider_equity import Player as EquityPlayer
@@ -422,12 +454,12 @@ class SelfPlay:
         # env.add_player(RandomPlayer(name='rand3'))
         # env.add_player(PlayerShell(name='pytorch', stack_size=self.stack))  # shell is used for callback
 
-        env.add_player(EquityPlayer(name='equity/50/50', min_call_equity=.5, min_bet_equity=.5))
-        env.add_player(EquityPlayer(name='equity/50/80', min_call_equity=.8, min_bet_equity=.8))
-        env.add_player(EquityPlayer(name='equity/70/70', min_call_equity=.7, min_bet_equity=.7))
-        env.add_player(EquityPlayer(name='equity/20/30', min_call_equity=.2, min_bet_equity=.3))
-        env.add_player(RandomPlayer())
-        env.add_player(PlayerShell(name='pytorch', stack_size=self.stack))  # shell is used for callback
+        self.env.add_player(EquityPlayer(name='equity/50/50', min_call_equity=.5, min_bet_equity=.5))
+        self.env.add_player(EquityPlayer(name='equity/50/80', min_call_equity=.8, min_bet_equity=.8))
+        self.env.add_player(EquityPlayer(name='equity/70/70', min_call_equity=.7, min_bet_equity=.7))
+        self.env.add_player(EquityPlayer(name='equity/20/30', min_call_equity=.2, min_bet_equity=.3))
+        self.env.add_player(RandomPlayer())
+        self.env.add_player(PlayerShell(name='pytorch', stack_size=self.stack))  # shell is used for callback
 
         # env.add_player(PlayerShell(name='pytorch1', stack_size=self.stack))
         # env.add_player(PlayerShell(name='pytorch2', stack_size=self.stack))
