@@ -24,7 +24,7 @@ Double Deep Q Networks, or DDQN, builds upon the DQN architecture by introducing
 Our goal largely consists of making a successful AI to play poker. This AI will be trained using pure reinforcement learning, meaning we will not use a database, and instead will train through self-play. To do so, we will apply various reinforcement learning techniques and models. We will begin with simpler models such as [DQN](https://www.adaltas.com/en/2019/01/09/applying-deep-reinforcement-learning-poker/) and build our way towards more complicated algorithms such as [Monte Carlo Counterfactual Regret Minimization](https://www.adaltas.com/en/2019/01/09/applying-deep-reinforcement-learning-poker/). (Edit: Never had time to implment more complex algorithms for this Poker AI. Implemented DDQN and DQN using 2 different libraries which gave us enough conclusive results for a semester.) Furthermore, we will compare the results from different models to analyze how well each model played poker. 
 
 ## Solution Concept
-![PokerProPlusSoftwareDiagram](https://github.com/ASasamori/PokerProPlus/Pictures/updatedDiagram.png)
+![PokerProPlusSoftwareDiagram](Pictures/updatedDiagram.png)
 
 1. Provided
 - Within the open-sourced game environment contains the states, actions, and a few agents. 
