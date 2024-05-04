@@ -17,7 +17,7 @@ With the rapid growth and expansion of AI in the last few years, it is becoming 
 Deep Q Networks, or DQN, is a model-free, online, off-policy RL method that uses a target critic and an experience buffer. It allows agents to learn from high-dimensional inputs, like images, and perform complex tasks. DQN considers future rewards when updating the value function for a given state-action pair. This means that the final reward doesn't need to be waited for until the end of the episode. 
 DQN agents are value-based RL agents that train a critic to estimate the expected discounted cumulative long-term reward when following the optimal policy. In Q-learning, the agent learns an ideal Q function that converts a pair of states and actions into an expected cumulative reward.
 
-## DDQN vs DQN
+### DDQN vs DQN
 Double Deep Q Networks, or DDQN, builds upon the DQN architecture by introducing the double Q-learning approach, using two Q-networks to provide more accurate Q-value estimates and address the overestimation bias present in standard DQN.
 
 ### Goals
