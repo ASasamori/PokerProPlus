@@ -24,7 +24,8 @@ Double Deep Q Networks, or DDQN, builds upon the DQN architecture by introducing
 Our goal largely consists of making a successful AI to play poker. This AI will be trained using pure reinforcement learning, meaning we will not use a database, and instead will train through self-play. To do so, we will apply various reinforcement learning techniques and models. We will begin with simpler models such as [DQN](https://www.adaltas.com/en/2019/01/09/applying-deep-reinforcement-learning-poker/) and build our way towards more complicated algorithms such as [Monte Carlo Counterfactual Regret Minimization](https://www.adaltas.com/en/2019/01/09/applying-deep-reinforcement-learning-poker/). (Edit: Never had time to implment more complex algorithms for this Poker AI. Implemented DDQN and DQN using 2 different libraries which gave us enough conclusive results for a semester.) Furthermore, we will compare the results from different models to analyze how well each model played poker. 
 
 ## Solution Concept
-![PokerProPlusSoftwareDiagram](https://github.com/ASasamori/PokerProPlus/assets/76934261/16368a44-0ec5-496b-8980-0a6d29d8338f)
+![PokerProPlusSoftwareDiagram](https://github.com/ASasamori/PokerProPlus/Pictures/updatedDiagram.png)
+
 1. Provided
 - Within the open-sourced game environment contains the states, actions, and a few agents. 
 
@@ -41,11 +42,12 @@ Our goal largely consists of making a successful AI to play poker. This AI will 
 5. agent_keras_rl_ddqn.py
 - DDQN implementation using the KerasRL library. (Very similar to DQN approach)
 
-7. Other_agents
+6. Other_agents
 - Agents with algorithms such as Monte Carlo Counterfactual Regret Minimization(MCCRM), Deep Deterministic Policy Gradient (DDPG), or Advantage Actor-Critic (A2C).
 - However, we are unsure if we have the time or resources to devise, create, and train these models so we have left it as "Other_agents" for now.
+  - (We did not have enough time to implement this models. Project to work on in the future.)
 
-6. Hyperparameter Tuning
+7. Hyperparameter Tuning
 - Each agent will have unique parameters such as in the agent_keras_rl_dqn having parameters such as nb_max_start_steps (max number of random actions at the beginning), nb_steps_warmup (before training starts), nb_steps (number of total steps), memory_limit (limit memory of experience replay), and batch_size (number of items sampled from memory to train).
 - We will tune these parameters to find the parameters that will provide the greatest rewards. 
 
